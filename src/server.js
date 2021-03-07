@@ -19,6 +19,6 @@ app.use('/contest', Contest)
 export async function start() {
 	await connect()
 	app.listen(3000, function logConnection() {
-		console.log('YourGame API is Running On http://localhost:3000/')
+		console.log('YourGame API is Running')
 	})
 }
