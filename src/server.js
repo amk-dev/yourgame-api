@@ -18,7 +18,7 @@ app.use('/contest', Contest)
 
 export async function start() {
 	await connect()
-	app.listen(3000, function logConnection() {
-		console.log('YourGame API is Running')
+	app.listen(process.env.PORT, function logConnection() {
+		console.log(`YourGame API is running on port${process.env.PORT}`)
 	})
 }
