@@ -145,7 +145,7 @@ router.post(
 					correct_answer: 0,
 				},
 			},
-		]).sample(4)
+		]).sample(10)
 
 		// TODO:: Embedd Question Rather Than Just QuestionIds
 		let questionIds = questions.reduce(function getQuestionIds(
@@ -319,7 +319,7 @@ async function createNewSubmission(
 	answeredTime,
 	timeTaken
 ) {
-	let isRight = `option_${answer.toLowerCase()}` === correct_answer
+	let isRight = answer.toLowerCase() === correct_answer
 
 	const newSubmission = new Submission({
 		uid: uid,
