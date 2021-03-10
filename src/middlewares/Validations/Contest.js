@@ -184,7 +184,7 @@ export async function isAnsweringOpen(req, res, next) {
 }
 
 export async function isAllQuestionsFinished(req, res, next) {
-	if (req.contest.currentQuestion + 1 > 4) {
+	if (req.contest.currentQuestion + 1 > 10) {
 		return res.status(400).send({
 			error: true,
 			message: 'all-questions-finished',
