@@ -240,6 +240,7 @@ router.get('/leaderboard', haveContestId, async function(req, res) {
 			{
 				$sort: {
 					totalPoints: -1,
+					totalTimeTaken: 1,
 				},
 			},
 			{
