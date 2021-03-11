@@ -51,7 +51,7 @@ router.post('/create', AuthMiddleware, async function(req, res) {
 	}
 })
 
-router.get('/mycontests', AuthMiddleware, async function(req, res) {
+router.get('/createdcontests', AuthMiddleware, async function(req, res) {
 	const uid = req.uid
 
 	const contests = await Contest.find({
