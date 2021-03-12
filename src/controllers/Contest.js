@@ -57,6 +57,9 @@ router.get('/createdcontests', AuthMiddleware, async function(req, res) {
 	const contests = await Contest.find({
 		host_uid: uid,
 	})
+		.sort({
+			startTime: -1,
+		})
 		.lean()
 		.exec()
 
@@ -76,6 +79,9 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 			contest: 1,
 			_id: 0,
 		})
+		.sort({
+			startTime: -1,
+		})
 		.lean()
 		.exec()
 
@@ -94,6 +100,9 @@ router.get('/all', async function(req, res) {
 		status: 'upcoming',
 	})
 		.select({ questions: 0 })
+		.sort({
+			startTime: -1,
+		})
 		.lean()
 		.exec()
 
