@@ -194,6 +194,28 @@ export async function isAllQuestionsFinished(req, res, next) {
 	next()
 }
 
+export async function haveMoreQuestions(req, res, next) {
+	if (req.contest.currentQuestion != 10) {
+		return res.status(400).send({
+			error: true,
+			message: 'not-all-questions-finished',
+		})
+	}
+
+	next()
+}
+
+export async function isContestEnded(req, res, next) {
+	if (req.contest.status == 'ended') {
+		return res.status(400).send({
+			error: true,
+			message: 'contest-already-ended',
+		})
+	}
+
+	next()
+}
+
 // TODO:: Error Handling
 async function getContest(contestId, host_uid = null, lean = true) {
 	let query = {

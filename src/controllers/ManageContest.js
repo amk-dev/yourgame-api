@@ -6,6 +6,7 @@ import Contest from './../models/Contest'
 import Contestant from './../models/Contestant'
 import Question from './../models/Question'
 import Submission from './../models/Submission'
+import Winning from './../models/Winning'
 
 import mongoose from 'mongoose'
 import {
@@ -23,6 +24,8 @@ import {
 	doesContestExists,
 	isContestantTheCreator,
 	isAlreadyJoined,
+	haveMoreQuestions,
+	isContestEnded,
 } from '../middlewares/Validations/Contest.js'
 
 let router = express.Router({
@@ -218,40 +221,82 @@ router.get(
 	}
 )
 
+router.post(
+	'/end',
+	AuthMiddleware,
+	haveContestId,
+	doesContestByHostExist,
+	haveMoreQuestions,
+	isContestEnded,
+	async function(req, res) {
+		// get all of the leaderboard
+		let leaderboard = await getLeaderboard(req.contestId, false)
+
+		// update their winnings
+		let contestWinnings = {
+			1: 100,
+			2: 75,
+			3: 50,
+			4: 25,
+			5: 10,
+			6: 10,
+			7: 10,
+			8: 10,
+			9: 10,
+		}
+
+		let winnings = []
+
+		for (let i = 0; i < 9; i++) {
+			if (i < leaderboard.length) {
+				let position = i + 1
+
+				winnings.push({
+					uid: leaderboard[i].uid,
+					contestId: req.contestId,
+					amount: contestWinnings[position],
+				})
+			} else {
+				break
+			}
+		}
+
+		try {
+			await Winning.insertMany(winnings, {
+				ordered: false,
+			})
+		} catch (err) {
+			if (err.code != 11000) {
+				console.log(err)
+			}
+		}
+
+		// update the leaderboard for contest
+		let contest = await Contest.findById(req.contestId).exec()
+		contest.leaderboard = leaderboard
+
+		contest.status = 'ended'
+		try {
+			await contest.save()
+
+			return res.send({
+				success: true,
+			})
+		} catch (err) {
+			console.log(err)
+
+			return res.status(500).send({
+				error: true,
+				message: 'something-went-wrong',
+			})
+		}
+	}
+)
+
 // TODO:: Move All The Repeating Parts Into Different Functions
 router.get('/leaderboard', haveContestId, async function(req, res) {
 	try {
-		let top10 = await Submission.aggregate([
-			{ $match: { contestId: mongoose.Types.ObjectId(req.contestId) } },
-			{
-				$group: {
-					_id: '$uid',
-					totalTimeTaken: {
-						$sum: '$timeTaken',
-					},
-					totalPoints: {
-						$sum: '$point',
-					},
-					uid: {
-						$first: '$uid',
-					},
-				},
-			},
-			{
-				$sort: {
-					totalPoints: -1,
-					totalTimeTaken: 1,
-				},
-			},
-			{
-				$limit: 10,
-			},
-		]).exec()
-
-		let leaderboard = await Submission.populate(top10, {
-			path: 'user',
-			select: 'displayName picture',
-		})
+		let leaderboard = await getLeaderboard(req.contestId)
 
 		res.send(leaderboard)
 	} catch (e) {
@@ -340,6 +385,47 @@ async function createNewSubmission(
 		console.log(e)
 		return false
 	}
+}
+
+async function getLeaderboard(contestId, top10 = true) {
+	let stages = [
+		{ $match: { contestId: mongoose.Types.ObjectId(contestId) } },
+		{
+			$group: {
+				_id: '$uid',
+				totalTimeTaken: {
+					$sum: '$timeTaken',
+				},
+				totalPoints: {
+					$sum: '$point',
+				},
+				uid: {
+					$first: '$uid',
+				},
+			},
+		},
+		{
+			$sort: {
+				totalPoints: -1,
+				totalTimeTaken: 1,
+			},
+		},
+	]
+
+	if (top10) {
+		stages.push({
+			$limit: 10,
+		})
+	}
+
+	let result = await Submission.aggregate(stages).exec()
+
+	let leaderboard = await Submission.populate(result, {
+		path: 'user',
+		select: 'displayName picture',
+	})
+
+	return leaderboard
 }
 
 export default router
