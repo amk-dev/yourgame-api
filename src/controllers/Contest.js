@@ -74,6 +74,7 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 			host_display_name: 1,
 			host_picture: 1,
 			startTime: 1,
+			status: 1,
 		})
 		.select({
 			contest: 1,
