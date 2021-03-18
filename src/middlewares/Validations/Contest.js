@@ -1,6 +1,7 @@
 import Contest from './../../models/Contest'
 import Contestant from './../../models/Contestant'
 import Submission from './../../models/Submission'
+import User from './../../models/User'
 
 export async function isContestantTheCreator(req, res, next) {
 	let contest = req.contest
@@ -9,6 +10,32 @@ export async function isContestantTheCreator(req, res, next) {
 		return res.status(400).send({
 			error: true,
 			message: 'host-cannot-join-the-contest',
+		})
+	}
+
+	next()
+}
+
+export async function isCreator(req, res, next) {
+	try {
+		let user = await User.findOne({
+			uid: req.uid,
+		})
+			.lean()
+			.exec()
+
+		if (!user.isCreator) {
+			return res.status(401).send({
+				error: true,
+				message: 'not-a-creator',
+			})
+		}
+	} catch (err) {
+		console.log(err)
+
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
 		})
 	}
 
