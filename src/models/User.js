@@ -27,6 +27,15 @@ const user = new mongoose.Schema({
 	},
 })
 
+user.index(
+	{
+		uid: 1,
+	},
+	{
+		unique: true,
+	}
+)
+
 const User = mongoose.model('user', user)
 
 export default User

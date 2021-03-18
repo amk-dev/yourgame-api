@@ -26,8 +26,6 @@ contestant.index(
 	}
 )
 
-contestant.p
-
 const Contestant = mongoose.model('contestant', contestant)
 
 export default Contestant

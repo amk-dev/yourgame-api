@@ -16,6 +16,14 @@ app.use(morgan('combined'))
 app.use('/auth', AuthMiddleware, Auth)
 app.use('/contest', Contest)
 
+app.use(function(err, req, res, next) {
+	console.log(err)
+	return res.status(500).send({
+		error: true,
+		message: 'something-went-wrong',
+	})
+})
+
 export async function start() {
 	await connect()
 	app.listen(process.env.PORT, function logConnection() {
