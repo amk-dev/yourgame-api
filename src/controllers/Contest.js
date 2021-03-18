@@ -3,13 +3,15 @@ import AuthMiddleware from './../middlewares/Auth.js'
 import Contest from './../models/Contest'
 import Contestant from './../models/Contestant'
 
+import { isCreator } from '../middlewares/Validations/Contest.js'
+
 import ContestActionsRouter from './ManageContest.js'
 
 let router = express.Router()
 
 router.use('/:contestId', ContestActionsRouter)
 
-router.post('/create', AuthMiddleware, async function(req, res) {
+router.post('/create', AuthMiddleware, isCreator, async function(req, res) {
 	const { youtubeVideoId, contestTime } = req.body
 	const host_uid = req.uid
 
