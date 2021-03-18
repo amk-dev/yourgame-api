@@ -88,7 +88,9 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 	let joinedcontests = []
 
 	for (let contest of contests) {
-		joinedcontests.push(contest.contest)
+		if (contest.contest) {
+			joinedcontests.push(contest.contest)
+		}
 	}
 
 	return res.send(joinedcontests)
