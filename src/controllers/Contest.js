@@ -74,6 +74,7 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 			host_display_name: 1,
 			host_picture: 1,
 			startTime: 1,
+			status: 1,
 		})
 		.select({
 			contest: 1,
@@ -88,7 +89,9 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 	let joinedcontests = []
 
 	for (let contest of contests) {
-		joinedcontests.push(contest.contest)
+		if (contest.contest) {
+			joinedcontests.push(contest.contest)
+		}
 	}
 
 	return res.send(joinedcontests)
