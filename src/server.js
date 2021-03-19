@@ -6,6 +6,7 @@ import { connect } from './db.js'
 import Auth from './controllers/Auth.js'
 import Contest from './controllers/Contest.js'
 import AuthMiddleware from './middlewares/Auth.js'
+import User from './controllers/User.js'
 
 const app = express()
 app.use(cors())
@@ -15,6 +16,7 @@ app.use(morgan('combined'))
 
 app.use('/auth', AuthMiddleware, Auth)
 app.use('/contest', Contest)
+app.use('/user', User)
 
 app.use(function(err, req, res, next) {
 	console.log(err)
