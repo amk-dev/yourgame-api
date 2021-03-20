@@ -1,5 +1,17 @@
 import mongoose from 'mongoose'
 
+const transactionsHistory = new mongoose.Schema({
+	amount: {
+		type: Number,
+	},
+	event: {
+		type: String,
+	},
+	time: {
+		type: Number,
+	},
+})
+
 const user = new mongoose.Schema({
 	uid: {
 		type: String,
@@ -28,6 +40,13 @@ const user = new mongoose.Schema({
 	isCreator: {
 		type: Boolean,
 	},
+	isReffered: {
+		type: Boolean,
+	},
+	refferedBy: {
+		type: String,
+	},
+	transactionsHistory: [transactionsHistory],
 })
 
 user.index(
