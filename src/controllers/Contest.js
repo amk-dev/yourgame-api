@@ -11,7 +11,7 @@ let router = express.Router()
 
 router.use('/:contestId', ContestActionsRouter)
 
-router.post('/create', AuthMiddleware, isCreator, async function(req, res) {
+router.post('/create', AuthMiddleware, isCreator, async function (req, res) {
 	const { youtubeVideoId, contestTime } = req.body
 	const host_uid = req.uid
 
@@ -53,7 +53,7 @@ router.post('/create', AuthMiddleware, isCreator, async function(req, res) {
 	}
 })
 
-router.get('/createdcontests', AuthMiddleware, async function(req, res) {
+router.get('/createdcontests', AuthMiddleware, async function (req, res) {
 	const uid = req.uid
 
 	const contests = await Contest.find({
@@ -68,7 +68,7 @@ router.get('/createdcontests', AuthMiddleware, async function(req, res) {
 	return res.send(contests)
 })
 
-router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
+router.get('/joinedcontests', AuthMiddleware, async function (req, res) {
 	const uid = req.uid
 
 	let contests = await Contestant.find({ uid: uid })
@@ -100,7 +100,7 @@ router.get('/joinedcontests', AuthMiddleware, async function(req, res) {
 })
 
 // TODO:: Add Pagination
-router.get('/all', async function(req, res) {
+router.get('/all', async function (req, res) {
 	const contests = await Contest.find({
 		status: 'upcoming',
 	})

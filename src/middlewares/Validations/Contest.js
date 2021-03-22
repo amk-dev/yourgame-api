@@ -254,9 +254,7 @@ async function getContest(contestId, host_uid = null, lean = true) {
 	}
 
 	if (lean) {
-		return await Contest.findOne(query)
-			.lean()
-			.exec()
+		return await Contest.findOne(query).lean().exec()
 	} else {
 		return await Contest.findOne(query).exec()
 	}

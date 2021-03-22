@@ -32,40 +32,42 @@ let router = express.Router({
 	mergeParams: true,
 })
 
-router.get('/details', attachUserDataIfAvailable, haveContestId, async function(
-	req,
-	res
-) {
-	try {
-		let contest = await Contest.findById(req.contestId)
-			.select({
-				questions: 0,
-			})
-			.lean()
-			.exec()
+router.get(
+	'/details',
+	attachUserDataIfAvailable,
+	haveContestId,
+	async function (req, res) {
+		try {
+			let contest = await Contest.findById(req.contestId)
+				.select({
+					questions: 0,
+				})
+				.lean()
+				.exec()
 
-		if (req.uid) {
-			contest.isJoined = !!(await Contestant.findOne({
-				uid: req.uid,
-				contest: req.contestId,
-			}))
+			if (req.uid) {
+				contest.isJoined = !!(await Contestant.findOne({
+					uid: req.uid,
+					contest: req.contestId,
+				}))
 
-			contest.isCreator = contest.host_uid == req.uid
-		} else {
-			contest.isJoined = false
-			contest.isCreator = false
-		}
+				contest.isCreator = contest.host_uid == req.uid
+			} else {
+				contest.isJoined = false
+				contest.isCreator = false
+			}
 
-		return res.send(contest)
-	} catch (error) {
-		if (error instanceof mongoose.Error.CastError) {
-			return res.status(400).send({
-				// error: true,
-				message: 'invalid-contest-id',
-			})
+			return res.send(contest)
+		} catch (error) {
+			if (error instanceof mongoose.Error.CastError) {
+				return res.status(400).send({
+					// error: true,
+					message: 'invalid-contest-id',
+				})
+			}
 		}
 	}
-})
+)
 
 router.post(
 	'/join',
@@ -75,7 +77,7 @@ router.post(
 	isContestLive,
 	isContestantTheCreator,
 	isAlreadyJoined,
-	async function(req, res) {
+	async function (req, res) {
 		let contestId = req.contestId
 
 		let newContestant = new Contestant({
@@ -105,7 +107,7 @@ router.post(
 	AuthMiddleware,
 	haveContestId,
 	doesContestByHostExist,
-	async function(req, res) {
+	async function (req, res) {
 		try {
 			let contest = req.contest
 			contest.currentQuestionStatus = 'closed'
@@ -137,7 +139,7 @@ router.post(
 	haveContestId,
 	doesContestByHostExist,
 	isContestLive,
-	async function(req, res) {
+	async function (req, res) {
 		// pick random sample for questions
 
 		let contest = req.contest
@@ -189,7 +191,7 @@ router.get(
 	haveContestId,
 	doesContestByHostExist,
 	isAllQuestionsFinished,
-	async function(req, res) {
+	async function (req, res) {
 		let contest = req.contest
 
 		let nextQuestion = await Question.findById(
@@ -228,7 +230,7 @@ router.post(
 	doesContestByHostExist,
 	haveMoreQuestions,
 	isContestEnded,
-	async function(req, res) {
+	async function (req, res) {
 		// get all of the leaderboard
 		let leaderboard = await getLeaderboard(req.contestId, false)
 
@@ -294,7 +296,7 @@ router.post(
 )
 
 // TODO:: Move All The Repeating Parts Into Different Functions
-router.get('/leaderboard', haveContestId, async function(req, res) {
+router.get('/leaderboard', haveContestId, async function (req, res) {
 	try {
 		let leaderboard = await getLeaderboard(req.contestId)
 
@@ -320,7 +322,7 @@ router.post(
 	isQuestionAlreadyAnswered,
 	hasContestStarted,
 	isAnsweringOpen,
-	async function(req, res) {
+	async function (req, res) {
 		let contest = req.contest
 		let contestant = req.contestant
 
@@ -334,7 +336,7 @@ router.post(
 			.exec()
 
 		try {
-			const newSubmission = await createNewSubmission(
+			await createNewSubmission(
 				contestant.uid,
 				contest._id,
 				req.answer,

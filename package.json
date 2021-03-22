@@ -8,7 +8,12 @@
 		"dev": "nodemon --exec npm run restart",
 		"restart": "rimraf dist && npm run build && npm start",
 		"start": "node --require dotenv/config ./dist/index.js",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"lint": "eslint --ignore-path .gitignore \"**/*.js\"",
+		"prettier": "prettier --ignore-path .gitignore \"**/*.+(js|json)\"",
+		"check-format": "npm run prettier -- --list-different",
+		"format": "npm run prettier -- --write",
+		"validate": "npm-run-all --parallel check-format lint build"
 	},
 	"author": "Akash Mohan",
 	"license": "ISC",
@@ -24,10 +29,44 @@
 	"devDependencies": {
 		"@babel/cli": "^7.12.10",
 		"@babel/core": "^7.12.10",
+		"@babel/eslint-parser": "^7.13.10",
 		"@babel/preset-env": "^7.12.11",
 		"dotenv": "^8.2.0",
+		"eslint": "^7.22.0",
+		"eslint-config-prettier": "^8.1.0",
+		"husky": "^4.3.8",
+		"lint-staged": "^10.5.4",
 		"morgan": "^1.10.0",
 		"nodemon": "^2.0.6",
+		"npm-run-all": "^4.1.5",
+		"prettier": "^2.2.1",
 		"rimraf": "^3.0.2"
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "lint-staged && npm run build"
+		}
+	},
+	"eslintConfig": {
+		"root": true,
+		"env": {
+			"node": true
+		},
+		"extends": [
+			"eslint:recommended",
+			"prettier"
+		],
+		"parser": "@babel/eslint-parser",
+		"parserOptions": {
+			"requireConfigFile": false
+		}
+	},
+	"lint-staged": {
+		"*.js": [
+			"eslint"
+		],
+		"**/*.+(js|json)": [
+			"prettier --write"
+		]
 	}
 }

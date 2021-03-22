@@ -1,10 +1,8 @@
 import Token from './../models/Token.js'
 
 export default async function YoutubeCredentials(req, res, next) {
-	const userToken = await Token.findOne({ uid: req.uid })
-		.lean()
-		.exec()
-		
+	const userToken = await Token.findOne({ uid: req.uid }).lean().exec()
+
 	if (userToken) {
 		let {
 			refresh_token,

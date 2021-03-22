@@ -18,7 +18,7 @@ app.use('/auth', AuthMiddleware, Auth)
 app.use('/contest', Contest)
 app.use('/user', User)
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res) {
 	console.log(err)
 	return res.status(500).send({
 		error: true,
