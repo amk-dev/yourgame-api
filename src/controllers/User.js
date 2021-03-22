@@ -10,7 +10,7 @@ import {
 
 let router = express.Router()
 
-router.get('/iscreator', AuthMiddleware, async function(req, res) {
+router.get('/iscreator', AuthMiddleware, async function (req, res) {
 	const uid = req.uid
 
 	let user = await User.findOne({
@@ -30,7 +30,7 @@ router.post(
 	AuthMiddleware,
 	isValidRefferalId,
 	doesRefferalExist,
-	async function(req, res) {
+	async function (req, res) {
 		try {
 			let user = req.user
 			let successMessage
