@@ -12,7 +12,13 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(morgan('combined'))
+
+morgan.token('uid', (req) => (req.uid ? req.uid : 'not-authorized'))
+app.use(
+	morgan(
+		':method :url :status :res[content-length] :response-time ms :date[clf] :uid'
+	)
+)
 
 app.use('/auth', AuthMiddleware, Auth)
 app.use('/contest', Contest)
