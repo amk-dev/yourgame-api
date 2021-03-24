@@ -1,12 +1,20 @@
 import express from 'express'
 import cors from 'cors'
 
+import * as Sentry from '@sentry/node'
+
 import { connect } from './db.js'
 import logger from './logger.js'
 import morganHandler from './morgan.js'
 
 import Contest from './controllers/Contest.js'
 import User from './controllers/User.js'
+
+if (process.env.NODE_ENV == 'production') {
+	Sentry.init({
+		dsn: process.env.SENTRY_URL,
+	})
+}
 
 const app = express()
 app.use(cors())
@@ -21,6 +29,7 @@ app.use('/user', User)
 // eslint-disable-next-line
 app.use(function (err, req, res, next) {
 	logger.error(err)
+	Sentry.captureException(err)
 	return res.status(500).send({
 		error: true,
 		message: 'something-went-wrong',
