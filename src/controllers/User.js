@@ -67,6 +67,75 @@ router.post(
 	}
 )
 
+router.get('/money', AuthMiddleware, async function (req, res) {
+	let user = await User.findOne({
+		uid: req.uid,
+	})
+		.select('winnings bonus')
+		.lean()
+		.exec()
+
+	if (!user) {
+		return req.status(400).send({
+			error: true,
+			message: 'cannot-find-user',
+		})
+	}
+
+	return res.send({
+		winnings: user.winnings,
+		bonus: user.bonus,
+	})
+})
+
+router.get('/money/referral', AuthMiddleware, async function (req, res) {
+	let referredUsers = await User.find({
+		referredBy: req.uid,
+	})
+		.select('_id')
+		.lean()
+		.exec()
+
+	let referralAmount = referredUsers.length * 50
+
+	return res.send({
+		referralAmount,
+	})
+})
+
+router.get('/referrals', AuthMiddleware, async function (req, res) {
+	try {
+		let referrals = await User.find({
+			refferedBy: req.uid,
+		})
+			.select('displayName picture')
+			.lean()
+			.exec()
+
+		res.send(referrals)
+	} catch (error) {
+		res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+})
+
+router.get('/transactions', AuthMiddleware, async function (req, res) {
+	try {
+		let transactions = await User.find({
+			uid: req.uid,
+		}).select('transactionsHistory')
+
+		return res.send(transactions[0].transactionsHistory)
+	} catch (error) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+})
+
 async function addRefferalBonus(refferedBy) {
 	try {
 		let user = await User.findOne({
