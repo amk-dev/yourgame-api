@@ -1,6 +1,4 @@
 import Contest from './../../models/Contest'
-import Contestant from './../../models/Contestant'
-import Submission from './../../models/Submission'
 import User from './../../models/User'
 
 export async function isContestantTheCreator(req, res, next) {
@@ -14,6 +12,48 @@ export async function isContestantTheCreator(req, res, next) {
 	}
 
 	next()
+}
+
+export async function hasEnoughBalanceToJoin(req, res, next) {
+	try {
+		let user = await User.findOne({
+			uid: req.uid,
+		})
+			.select('balance winnings')
+			.exec()
+
+		let winnings = user.winnings
+		let bonus = user.bonus
+
+		let totalAmount = winnings + bonus
+
+		if (user.bonus >= 10) {
+			user.bonus -= 10
+		} else if (totalAmount >= 10) {
+			user.winnings -= 10 - user.bonus
+			user.bonus = 0
+		} else {
+			return res.status(400).send({
+				error: true,
+				message: 'not-enough-balance',
+			})
+		}
+
+		user.transactionsHistory.push({
+			amount: -10,
+			event: 'joined-contest',
+			time: new Date().getTime(),
+		})
+
+		await user.save()
+
+		next()
+	} catch (error) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
 }
 
 export async function isCreator(req, res, next) {
@@ -184,10 +224,20 @@ export async function isAlreadyJoined(req, res, next) {
 }
 
 export async function isQuestionAlreadyAnswered(req, res, next) {
-	let contest = await Contest.findById(req.contestId).exec()
+	let contest = await Contest.findById(req.contestId).lean().exec()
+
+	let joinedContest = await User.findOne({
+		uid: req.uid,
+		'joinedContests.contest': req.contestId,
+	})
+		.lean()
+		.exec()
 
 	const currentQuestionId = contest.questions[contest.currentQuestion - 1]
-	let submission = await isAlreadySubmitted(currentQuestionId, req.uid)
+
+	let submission = await joinedContest[0].submissions.findOne({
+		questionId: currentQuestionId,
+	})
 
 	if (submission) {
 		return res.status(400).send({
@@ -260,21 +310,10 @@ async function getContest(contestId, host_uid = null, lean = true) {
 	}
 }
 
-async function isAlreadySubmitted(questionId, uid) {
-	let submission = await Submission.find({
-		questionId: questionId,
-		uid: uid,
-	})
-		.lean()
-		.exec()
-
-	return submission.length > 0
-}
-
 async function findContestant(contestId, uid) {
-	let contestant = await Contestant.findOne({
-		contest: contestId,
+	let contestant = await User.findOne({
 		uid: uid,
+		'joinedContests.contest': contestId,
 	}).exec()
 
 	return contestant

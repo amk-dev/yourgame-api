@@ -12,6 +12,44 @@ const transactionsHistory = new mongoose.Schema({
 	},
 })
 
+const submission = new mongoose.Schema({
+	answer: {
+		type: String,
+		required: true,
+	},
+	isRight: {
+		type: Boolean,
+		required: true,
+	},
+	questionId: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'question',
+		required: true,
+	},
+	answeredTime: {
+		type: Number,
+		required: true,
+	},
+	timeTaken: {
+		type: Number,
+		required: true,
+	},
+	point: {
+		type: Number,
+		required: true,
+	},
+})
+
+const joinedContest = new mongoose.Schema({
+	contest: {
+		type: mongoose.Schema.Types.ObjectId,
+		required: true,
+		ref: 'contest',
+		unique: true,
+	},
+	submissions: [submission],
+})
+
 const user = new mongoose.Schema({
 	uid: {
 		type: String,
@@ -47,6 +85,7 @@ const user = new mongoose.Schema({
 		type: String,
 	},
 	transactionsHistory: [transactionsHistory],
+	joinedContests: [joinedContest],
 })
 
 user.index(

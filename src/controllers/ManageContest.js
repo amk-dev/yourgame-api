@@ -5,7 +5,6 @@ import { attachUserDataIfAvailable } from '../middlewares/Auth.js'
 import Contest from './../models/Contest'
 import Contestant from './../models/Contestant'
 import Question from './../models/Question'
-import Submission from './../models/Submission'
 import Winning from './../models/Winning'
 
 import mongoose from 'mongoose'
@@ -26,7 +25,9 @@ import {
 	isAlreadyJoined,
 	haveMoreQuestions,
 	isContestEnded,
+	hasEnoughBalanceToJoin,
 } from '../middlewares/Validations/Contest.js'
+import User from '../models/User.js'
 
 let router = express.Router({
 	mergeParams: true,
@@ -77,23 +78,21 @@ router.post(
 	isContestLive,
 	isContestantTheCreator,
 	isAlreadyJoined,
+	hasEnoughBalanceToJoin(),
 	async function (req, res) {
 		let contestId = req.contestId
-
-		let newContestant = new Contestant({
-			uid: req.uid,
+		let user = req.user
+		user.joinedContests.push({
 			contest: contestId,
-			points: 0,
 		})
 
 		try {
-			await newContestant.save()
+			await user.save()
 			return res.send({
 				success: true,
 			})
 		} catch (e) {
 			console.log(e)
-
 			return res.status(500).send({
 				error: true,
 				message: 'cannot-join-contest',
@@ -323,93 +322,90 @@ router.post(
 	hasContestStarted,
 	isAnsweringOpen,
 	async function (req, res) {
-		let contest = req.contest
-		let contestant = req.contestant
-
-		// create a new submission
-		let answeredTime = Date.now()
-		let timeTaken = answeredTime - contest.currentQuestionReleaseTime
-
-		let currentQuestionId = contest.questions[contest.currentQuestion - 1]
-		let currentQuestion = await Question.findById(currentQuestionId)
-			.lean()
-			.exec()
-
 		try {
-			await createNewSubmission(
-				contestant.uid,
-				contest._id,
-				req.answer,
-				currentQuestion.correct_answer,
-				currentQuestionId,
-				answeredTime,
-				timeTaken
-			)
+			let contest = req.contest
+			let contestant = req.contestant
 
-			res.send({
+			// create a new submission
+			let answeredTime = Date.now()
+			let timeTaken = answeredTime - contest.currentQuestionReleaseTime
+			let currentQuestionId =
+				contest.questions[contest.currentQuestion - 1]
+			let currentQuestion = await Question.findById(currentQuestionId)
+				.lean()
+				.exec()
+
+			let answer = req.answer
+			let isRightAnswer =
+				answer.toLowerCase() === currentQuestion.correct_answer
+
+			let newSubmission = {
+				contest: contest._id,
+				answer: req.answer,
+				isRight: isRightAnswer,
+				questionId: currentQuestionId,
+				answeredTime: answeredTime,
+				timeTaken: timeTaken,
+			}
+
+			let joinedContest = await contestant.joinedContests
+				.findOne({
+					contest: contest._id,
+				})
+				.exec()
+
+			joinedContest.submissions.push(newSubmission)
+
+			if (isRightAnswer) {
+				joinedContest.points += 1
+			}
+
+			joinedContest.timeTaken += timeTaken
+
+			await contestant.save()
+
+			return res.send({
 				success: true,
 			})
 		} catch (e) {
 			console.log(e)
-			res.send({
+			return res.send({
 				error: true,
 			})
 		}
 	}
 )
 
-async function createNewSubmission(
-	uid,
-	contestId,
-	answer,
-	correct_answer,
-	questionId,
-	answeredTime,
-	timeTaken
-) {
-	let isRight = answer.toLowerCase() === correct_answer
-
-	const newSubmission = new Submission({
-		uid: uid,
-		contestId: contestId,
-		answer: answer,
-		isRight: isRight,
-		questionId: questionId,
-		answeredTime: answeredTime,
-		timeTaken: timeTaken,
-		point: isRight ? 1 : 0,
-	})
-
-	try {
-		await newSubmission.save()
-		return newSubmission
-	} catch (e) {
-		console.log(e)
-		return false
-	}
-}
-
 async function getLeaderboard(contestId, top10 = true) {
 	let stages = [
-		{ $match: { contestId: mongoose.Types.ObjectId(contestId) } },
 		{
-			$group: {
-				_id: '$uid',
-				totalTimeTaken: {
-					$sum: '$timeTaken',
-				},
-				totalPoints: {
-					$sum: '$point',
-				},
-				uid: {
-					$first: '$uid',
-				},
+			$match: {
+				'joinedContests.contest': contestId,
+			},
+		},
+		{
+			project: {
+				uid: 1,
+				displayName: 1,
+				picture: 1,
+				joinedContests: 1,
+			},
+		},
+		{
+			$unwind: '$joinedContests',
+		},
+		{
+			$project: {
+				uid: 1,
+				displayName: 1,
+				picture: 1,
+				points: '$joinedContests.point',
+				timeTaken: '$joinedContests.timeTaken',
 			},
 		},
 		{
 			$sort: {
-				totalPoints: -1,
-				totalTimeTaken: 1,
+				'joinedContest.points': -1,
 			},
 		},
 	]
@@ -420,12 +416,7 @@ async function getLeaderboard(contestId, top10 = true) {
 		})
 	}
 
-	let result = await Submission.aggregate(stages).exec()
-
-	let leaderboard = await Submission.populate(result, {
-		path: 'user',
-		select: 'displayName picture',
-	})
+	let leaderboard = await User.aggregate(stages)
 
 	return leaderboard
 }
