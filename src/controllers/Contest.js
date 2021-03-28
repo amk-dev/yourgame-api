@@ -2,16 +2,27 @@ import express from 'express'
 import AuthMiddleware from './../middlewares/Auth.js'
 import Contest from './../models/Contest'
 import Contestant from './../models/Contestant'
-
 import { isCreator } from '../middlewares/Validations/Contest.js'
-
 import ContestActionsRouter from './ManageContest.js'
+
+import { createNewContest } from './utils/utils.js'
 
 let router = express.Router()
 
 router.use('/:contestId', ContestActionsRouter)
 
-router.post('/create', AuthMiddleware, isCreator, async function (req, res) {
+router.post('/create', AuthMiddleware, isCreator, create)
+
+router.get('/createdcontests', AuthMiddleware, sendCreatedContests)
+
+router.get('/joinedcontests', AuthMiddleware, sendJoinedContests)
+
+// TODO:: Add Pagination
+router.get('/all', sendAllContests)
+
+export default router
+
+export async function create(req, res) {
 	const { youtubeVideoId, contestTime } = req.body
 	const host_uid = req.uid
 
@@ -51,9 +62,9 @@ router.post('/create', AuthMiddleware, isCreator, async function (req, res) {
 			message: 'could-not-create-contest',
 		})
 	}
-})
+}
 
-router.get('/createdcontests', AuthMiddleware, async function (req, res) {
+async function sendCreatedContests(req, res) {
 	const uid = req.uid
 
 	const contests = await Contest.find({
@@ -66,9 +77,9 @@ router.get('/createdcontests', AuthMiddleware, async function (req, res) {
 		.exec()
 
 	return res.send(contests)
-})
+}
 
-router.get('/joinedcontests', AuthMiddleware, async function (req, res) {
+export async function sendJoinedContests(req, res) {
 	const uid = req.uid
 
 	let contests = await Contestant.find({ uid: uid })
@@ -97,10 +108,9 @@ router.get('/joinedcontests', AuthMiddleware, async function (req, res) {
 	}
 
 	return res.send(joinedcontests)
-})
+}
 
-// TODO:: Add Pagination
-router.get('/all', async function (req, res) {
+export async function sendAllContests(req, res) {
 	const contests = await Contest.find({
 		status: 'upcoming',
 	})
@@ -112,32 +122,4 @@ router.get('/all', async function (req, res) {
 		.exec()
 
 	return res.send(contests)
-})
-
-export default router
-
-async function createNewContest(
-	host_uid,
-	host_picture,
-	host_display_name,
-	youtubeVideoId,
-	startTime,
-	status
-) {
-	let newContest = new Contest({
-		host_uid,
-		host_picture,
-		host_display_name,
-		youtubeVideoId,
-		startTime,
-		status,
-	})
-
-	try {
-		await newContest.save()
-		return newContest
-	} catch (e) {
-		console.log(e)
-		return false
-	}
 }

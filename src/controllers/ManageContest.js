@@ -52,26 +52,7 @@ router.post(
 	isContestantTheCreator,
 	isAlreadyJoined,
 	hasEnoughBalanceToJoin,
-	async function (req, res) {
-		let contestId = req.contestId
-		let user = req.user
-		user.joinedContests.push({
-			contest: contestId,
-		})
-
-		try {
-			await user.save()
-			return res.send({
-				success: true,
-			})
-		} catch (e) {
-			console.log(e)
-			return res.status(500).send({
-				error: true,
-				message: 'cannot-join-contest',
-			})
-		}
-	}
+	joinContest
 )
 
 router.post(
@@ -79,29 +60,7 @@ router.post(
 	AuthMiddleware,
 	haveContestId,
 	doesContestByHostExist,
-	async function (req, res) {
-		try {
-			let contest = req.contest
-			contest.currentQuestionStatus = 'closed'
-
-			let currentQuestionId =
-				contest.questions[contest.currentQuestion - 1]
-
-			const question = await Question.findById(currentQuestionId)
-				.select('correct_answer')
-				.lean()
-				.exec()
-
-			await contest.save()
-
-			return res.send(question)
-		} catch (e) {
-			return res.status(500).send({
-				error: true,
-				message: 'something-went-wrong',
-			})
-		}
-	}
+	closeCurrentQuestion
 )
 
 // Should Generate The Questions And Return The First Question
@@ -111,50 +70,7 @@ router.post(
 	haveContestId,
 	doesContestByHostExist,
 	isContestLive,
-	async function (req, res) {
-		// pick random sample for questions
-
-		let contest = req.contest
-
-		let questions = await Question.aggregate([
-			{
-				$project: {
-					correct_answer: 0,
-				},
-			},
-		]).sample(10)
-
-		// TODO:: Embedd Question Rather Than Just QuestionIds
-		let questionIds = questions.reduce(function getQuestionIds(
-			questionIds,
-			question
-		) {
-			questionIds.push(question._id)
-			return questionIds
-		},
-		[])
-
-		contest.status = 'live'
-		contest.questions = questionIds
-		contest.currentQuestion = 1
-		contest.currentQuestionReleaseTime = Date.now()
-		contest.currentQuestionStatus = 'open'
-
-		try {
-			await contest.save()
-			return res.send({
-				question: {
-					...questions[0],
-					questionNumber: contest.currentQuestion,
-				},
-			})
-		} catch (e) {
-			console.log(e)
-			return res.status(500).send({
-				error: true,
-			})
-		}
-	}
+	startContest
 )
 
 router.get(
@@ -163,36 +79,7 @@ router.get(
 	haveContestId,
 	doesContestByHostExist,
 	isAllQuestionsFinished,
-	async function (req, res) {
-		let contest = req.contest
-
-		let nextQuestion = await Question.findById(
-			contest.questions[contest.currentQuestion]
-		)
-			.select('name option_a option_b option_c option_d')
-			.lean()
-			.exec()
-
-		contest.currentQuestion += 1
-		contest.currentQuestionStatus = 'open'
-		contest.currentQuestionReleaseTime = Date.now()
-
-		try {
-			await contest.save()
-
-			return res.send({
-				question: {
-					...nextQuestion,
-					questionNumber: contest.currentQuestion,
-				},
-			})
-		} catch (e) {
-			console.log(e)
-			return res.status(500).send({
-				error: true,
-			})
-		}
-	}
+	sendNextQuestion
 )
 
 router.post(
@@ -202,86 +89,11 @@ router.post(
 	doesContestByHostExist,
 	haveMoreQuestions,
 	isContestEnded,
-	async function (req, res) {
-		// get all of the leaderboard
-		let leaderboard = await getLeaderboard(req.contestId, false)
-
-		// update their winnings
-		let contestWinnings = {
-			1: 100,
-			2: 75,
-			3: 50,
-			4: 25,
-			5: 10,
-			6: 10,
-			7: 10,
-			8: 10,
-			9: 10,
-		}
-
-		let winnings = []
-
-		for (let i = 0; i < 9; i++) {
-			if (i < leaderboard.length) {
-				let position = i + 1
-
-				winnings.push({
-					uid: leaderboard[i].uid,
-					contestId: req.contestId,
-					amount: contestWinnings[position],
-				})
-			} else {
-				break
-			}
-		}
-
-		try {
-			await Winning.insertMany(winnings, {
-				ordered: false,
-			})
-		} catch (err) {
-			if (err.code != 11000) {
-				console.log(err)
-			}
-		}
-
-		// update the leaderboard for contest
-		let contest = await Contest.findById(req.contestId).exec()
-		contest.leaderboard = leaderboard
-
-		contest.status = 'ended'
-		try {
-			await contest.save()
-
-			return res.send({
-				success: true,
-			})
-		} catch (err) {
-			console.log(err)
-
-			return res.status(500).send({
-				error: true,
-				message: 'something-went-wrong',
-			})
-		}
-	}
+	endContest
 )
 
 // TODO:: Move All The Repeating Parts Into Different Functions
-router.get('/leaderboard', haveContestId, async function (req, res) {
-	try {
-		let leaderboard = await getLeaderboard(req.contestId)
-
-		res.send(leaderboard)
-	} catch (e) {
-		console.log(e)
-
-		res.status(500).send({
-			error: true,
-			message: 'cannot-get-leaderboard',
-		})
-	}
-})
+router.get('/leaderboard', haveContestId, sendLeaderboard)
 
 router.post(
 	'/answer',
@@ -294,59 +106,7 @@ router.post(
 	isQuestionAlreadyAnswered,
 	hasContestStarted,
 	isAnsweringOpen,
-	async function (req, res) {
-		try {
-			let contest = req.contest
-			let contestant = req.contestant
-
-			// create a new submission
-			let answeredTime = Date.now()
-			let timeTaken = answeredTime - contest.currentQuestionReleaseTime
-			let currentQuestionId =
-				contest.questions[contest.currentQuestion - 1]
-			let currentQuestion = await Question.findById(currentQuestionId)
-				.lean()
-				.exec()
-
-			let answer = req.answer
-			let isRightAnswer =
-				answer.toLowerCase() === currentQuestion.correct_answer
-
-			let newSubmission = {
-				contest: contest._id,
-				answer: req.answer,
-				isRight: isRightAnswer,
-				questionId: currentQuestionId,
-				answeredTime: answeredTime,
-				timeTaken: timeTaken,
-			}
-
-			let joinedContest = await contestant.joinedContests
-				.findOne({
-					contest: contest._id,
-				})
-				.exec()
-
-			joinedContest.submissions.push(newSubmission)
-
-			if (isRightAnswer) {
-				joinedContest.points += 1
-			}
-
-			joinedContest.timeTaken += timeTaken
-
-			await contestant.save()
-
-			return res.send({
-				success: true,
-			})
-		} catch (e) {
-			console.log(e)
-			return res.send({
-				error: true,
-			})
-		}
-	}
+	answerQuestion
 )
 
 export async function sendContestDetails(req, res) {
@@ -368,6 +128,257 @@ export async function sendContestDetails(req, res) {
 		return res.status(500).send({
 			error: true,
 			message: 'something-went-wrong',
+		})
+	}
+}
+
+export async function joinContest(req, res) {
+	let contestId = req.contestId
+	let user = req.user
+	user.joinedContests.push({
+		contest: contestId,
+	})
+
+	try {
+		await user.save()
+		return res.send({
+			success: true,
+		})
+	} catch (e) {
+		console.log(e)
+		return res.status(500).send({
+			error: true,
+			message: 'cannot-join-contest',
+		})
+	}
+}
+
+export async function closeCurrentQuestion(req, res) {
+	try {
+		let contest = req.contest
+		contest.currentQuestionStatus = 'closed'
+
+		let currentQuestionId = contest.questions[contest.currentQuestion - 1]
+
+		const question = await Question.findById(currentQuestionId)
+			.select('correct_answer')
+			.lean()
+			.exec()
+
+		await contest.save()
+
+		return res.send(question)
+	} catch (e) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+}
+
+export async function startContest(req, res) {
+	// pick random sample for questions
+	let contest = req.contest
+
+	let questions = await Question.aggregate([
+		{
+			$project: {
+				correct_answer: 0,
+			},
+		},
+	]).sample(10)
+
+	// TODO:: Embedd Question Rather Than Just QuestionIds
+	let questionIds = questions.reduce(function getQuestionIds(
+		questionIds,
+		question
+	) {
+		questionIds.push(question._id)
+		return questionIds
+	},
+	[])
+
+	contest.status = 'live'
+	contest.questions = questionIds
+	contest.currentQuestion = 1
+	contest.currentQuestionReleaseTime = Date.now()
+	contest.currentQuestionStatus = 'open'
+
+	try {
+		await contest.save()
+		return res.send({
+			question: {
+				...questions[0],
+				questionNumber: contest.currentQuestion,
+			},
+		})
+	} catch (e) {
+		console.log(e)
+		return res.status(500).send({
+			error: true,
+		})
+	}
+}
+
+async function sendNextQuestion(req, res) {
+	let contest = req.contest
+
+	let nextQuestion = await Question.findById(
+		contest.questions[contest.currentQuestion]
+	)
+		.select('name option_a option_b option_c option_d')
+		.lean()
+		.exec()
+
+	contest.currentQuestion += 1
+	contest.currentQuestionStatus = 'open'
+	contest.currentQuestionReleaseTime = Date.now()
+
+	try {
+		await contest.save()
+
+		return res.send({
+			question: {
+				...nextQuestion,
+				questionNumber: contest.currentQuestion,
+			},
+		})
+	} catch (e) {
+		console.log(e)
+		return res.status(500).send({
+			error: true,
+		})
+	}
+}
+
+export async function endContest(req, res) {
+	// get all of the leaderboard
+	let leaderboard = await getLeaderboard(req.contestId, false)
+
+	// update their winnings
+	let contestWinnings = {
+		1: 100,
+		2: 75,
+		3: 50,
+		4: 25,
+		5: 10,
+		6: 10,
+		7: 10,
+		8: 10,
+		9: 10,
+	}
+
+	let winnings = []
+
+	for (let i = 0; i < 9; i++) {
+		if (i < leaderboard.length) {
+			let position = i + 1
+
+			winnings.push({
+				uid: leaderboard[i].uid,
+				contestId: req.contestId,
+				amount: contestWinnings[position],
+			})
+		} else {
+			break
+		}
+	}
+
+	try {
+		await Winning.insertMany(winnings, {
+			ordered: false,
+		})
+	} catch (err) {
+		if (err.code != 11000) {
+			console.log(err)
+		}
+	}
+
+	// update the leaderboard for contest
+	let contest = await Contest.findById(req.contestId).exec()
+	contest.leaderboard = leaderboard
+
+	contest.status = 'ended'
+	try {
+		await contest.save()
+
+		return res.send({
+			success: true,
+		})
+	} catch (err) {
+		console.log(err)
+
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+}
+
+export async function sendLeaderboard(req, res) {
+	try {
+		let leaderboard = await getLeaderboard(req.contestId)
+
+		res.send(leaderboard)
+	} catch (e) {
+		console.log(e)
+
+		res.status(500).send({
+			error: true,
+			message: 'cannot-get-leaderboard',
+		})
+	}
+}
+
+export async function answerQuestion(req, res) {
+	try {
+		let contest = req.contest
+		let contestant = req.contestant
+
+		// create a new submission
+		let answeredTime = Date.now()
+		let timeTaken = answeredTime - contest.currentQuestionReleaseTime
+		let currentQuestionId = contest.questions[contest.currentQuestion - 1]
+		let currentQuestion = await Question.findById(currentQuestionId)
+			.lean()
+			.exec()
+
+		let answer = req.answer
+		let isRightAnswer =
+			answer.toLowerCase() === currentQuestion.correct_answer
+
+		let newSubmission = {
+			contest: contest._id,
+			answer: req.answer,
+			isRight: isRightAnswer,
+			questionId: currentQuestionId,
+			answeredTime: answeredTime,
+			timeTaken: timeTaken,
+		}
+
+		let joinedContest = await contestant.joinedContests
+			.findOne({
+				contest: contest._id,
+			})
+			.exec()
+
+		joinedContest.submissions.push(newSubmission)
+
+		if (isRightAnswer) {
+			joinedContest.points += 1
+		}
+
+		joinedContest.timeTaken += timeTaken
+
+		await contestant.save()
+
+		return res.send({
+			success: true,
+		})
+	} catch (e) {
+		console.log(e)
+		return res.send({
+			error: true,
 		})
 	}
 }
