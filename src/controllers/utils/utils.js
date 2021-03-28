@@ -75,3 +75,41 @@ export async function createNewContest(
 		return false
 	}
 }
+
+export async function getContestsByHostUid(host_uid) {
+	let contests = await Contest.find({
+		host_uid,
+	})
+		.sort({
+			startTime: -1,
+		})
+		.lean()
+		.exec()
+
+	return contests
+}
+
+export async function getJoinedContestsForUser(uid) {
+	let user = await User.aggregate([
+		{ $match: { uid: uid } },
+		{
+			$lookup: {
+				from: 'contests',
+				localField: 'joinedContests.contest',
+				foreignField: '_id',
+				as: 'joinedContests',
+			},
+		},
+		{
+			$project: {
+				'joinedContests._id': 1,
+				'joinedContests.host_display_name': 1,
+				'joinedContests.host_picture': 1,
+				'joinedContests.startTime': 1,
+				'joinedContests.status': 1,
+			},
+		},
+	]).exec()
+
+	return user[0].joinedContests
+}
