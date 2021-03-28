@@ -58,16 +58,16 @@ export async function createNewContest(
 	startTime,
 	status
 ) {
-	let newContest = new Contest({
-		host_uid,
-		host_picture,
-		host_display_name,
-		youtubeVideoId,
-		startTime,
-		status,
-	})
-
 	try {
+		let newContest = new Contest({
+			host_uid,
+			host_picture,
+			host_display_name,
+			youtubeVideoId,
+			startTime,
+			status,
+		})
+
 		await newContest.save()
 		return newContest
 	} catch (e) {
