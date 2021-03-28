@@ -4,47 +4,25 @@ import User from './../models/User.js'
 
 export default async function auth(req, res, next) {
 	const bearer = req.headers.authorization
-	let token = extractTokenFromHeader(bearer)
 
-	if (!token) return res.status(401).send()
+	let token = extractTokenFromHeader(bearer)
+	if (!token) return res.status(401).end()
 
 	let tokenContent = await getTokenContent(token)
-
 	if (!tokenContent) return res.status(401).end()
 
-	let user = await User.findOne({
-		uid: tokenContent.uid,
-	})
-		.lean()
-		.exec()
+	let { uid, email, picture } = tokenContent
+	let user = await findUserByUid(uid)
 
 	if (!user) {
-		let { uid, email, picture } = tokenContent
-
 		let { displayName } = await admin.auth().getUser(uid)
-
-		user = new User({
-			uid,
-			email,
-			picture,
-			displayName,
-		})
-
-		req.displayName = displayName
-
-		try {
-			await user.save()
-		} catch (e) {
-			console.log(e)
-		}
+		user = await createNewUser(uid, email, picture, displayName)
 	}
 
-	req.uid = tokenContent.uid
-	req.email = tokenContent.email
-	req.picture = tokenContent.picture
-	if (!req.displayName) {
-		req.displayName = user.displayName
-	}
+	req.uid = uid
+	req.email = email
+	req.picture = picture
+	req.displayName = user.displayName
 
 	next()
 }
@@ -123,4 +101,26 @@ async function verifyIdToken(idToken) {
 		console.log(error)
 		return false
 	}
+}
+
+async function findUserByUid(uid) {
+	let user = await User.findOne({
+		uid: uid,
+	})
+		.lean()
+		.exec()
+
+	return user
+}
+
+async function createNewUser(uid, email, picture, displayName) {
+	let user = new User({
+		uid,
+		email,
+		picture,
+		displayName,
+	})
+
+	await user.save()
+	return user
 }
