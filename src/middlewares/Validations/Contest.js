@@ -117,14 +117,14 @@ export async function doesContestExists(req, res, next) {
 			host_uid: 1,
 		})
 
-		req.contest = contest
-
 		if (!contest) {
 			return res.status(400).send({
 				error: true,
 				message: 'contest-does-not-exists',
 			})
 		}
+
+		req.contest = contest
 
 		next()
 	} catch (e) {

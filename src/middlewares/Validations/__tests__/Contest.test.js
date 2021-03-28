@@ -5,10 +5,13 @@ import {
 	isCreator,
 	haveContestId,
 	haveAnswer,
+	doesContestExists,
 } from './../Contest.js'
 import User from '../../../models/User.js'
+import Contest from '../../../models/Contest.js'
 
 jest.mock('../../../models/User.js')
+jest.mock('../../../models/Contest.js')
 
 function buildReq(overrides) {
 	return {
@@ -381,4 +384,108 @@ describe('haveAnswer', () => {
 	})
 })
 
-// describe('doesContestExists', )
+describe('doesContestExists', () => {
+	test('call next if contest exists', async () => {
+		let req = buildReq({ contestId: 'mockContestId' })
+		let res = buildRes()
+		let next = buildNext()
+
+		await doesContestExists(req, res, next)
+
+		Contest._id = 'mockContestId'
+
+		expect(Contest.findOne.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    Object {
+		      "_id": "mockContestId",
+		    },
+		  ],
+		]
+		`)
+
+		expect(Contest.select.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    Object {
+		      "host_uid": 1,
+		      "status": 1,
+		    },
+		  ],
+		]
+		`)
+
+		expect(req.contest._id).toBe('mockContestId')
+
+		expect(next).toHaveBeenCalledTimes(1)
+		expect(next).toHaveBeenCalledWith()
+
+		expect(res.send).toHaveBeenCalledTimes(0)
+		expect(res.status).toHaveBeenCalledTimes(0)
+	})
+
+	test('return 400 contest-does-not-exists if contest does not exists', async () => {
+		let req = buildReq({ contestId: 'mockContestId' })
+		let res = buildRes()
+		let next = buildNext()
+
+		Contest.select.mockImplementationOnce(() => null)
+
+		await doesContestExists(req, res, next)
+
+		expect(res.status.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    400,
+		  ],
+		]
+		`)
+
+		expect(res.send.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    Object {
+		      "error": true,
+		      "message": "contest-does-not-exists",
+		    },
+		  ],
+		]
+	`)
+
+		expect(req.contest).toBe(undefined)
+		expect(next).toHaveBeenCalledTimes(0)
+	})
+
+	test('handle errors', async () => {
+		let req = buildReq({ contestId: 'mockContestId' })
+		let res = buildRes()
+		let next = buildNext()
+
+		Contest.select.mockImplementationOnce(() => {
+			throw 'Error Occured'
+		})
+
+		await doesContestExists(req, res, next)
+
+		expect(res.send.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    Object {
+		      "error": true,
+		      "message": "something-went-wrong",
+		    },
+		  ],
+		]
+		`)
+
+		expect(res.status.mock.calls).toMatchInlineSnapshot(`
+		Array [
+		  Array [
+		    500,
+		  ],
+		]
+	`)
+
+		expect(next).toHaveBeenCalledTimes(0)
+	})
+})
