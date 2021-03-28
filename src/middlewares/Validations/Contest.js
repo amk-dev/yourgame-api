@@ -71,8 +71,6 @@ export async function isCreator(req, res, next) {
 			})
 		}
 	} catch (err) {
-		console.log(err)
-
 		return res.status(500).send({
 			error: true,
 			message: 'something-went-wrong',
@@ -96,6 +94,7 @@ export async function haveContestId(req, res, next) {
 
 	next()
 }
+
 export async function haveAnswer(req, res, next) {
 	const answer = req.body.answer
 
