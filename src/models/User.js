@@ -54,10 +54,12 @@ const user = new mongoose.Schema({
 	uid: {
 		type: String,
 		required: true,
+		unique: true,
 	},
 	email: {
 		type: String,
 		default: 0,
+		unique: true,
 	},
 	picture: {
 		type: String,
