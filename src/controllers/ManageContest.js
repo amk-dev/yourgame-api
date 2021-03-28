@@ -3,11 +3,14 @@ import AuthMiddleware from '../middlewares/Auth.js'
 import { attachUserDataIfAvailable } from '../middlewares/Auth.js'
 
 import Contest from './../models/Contest'
-import Contestant from './../models/Contestant'
 import Question from './../models/Question'
 import Winning from './../models/Winning'
 
-import mongoose from 'mongoose'
+import {
+	getContestDetailsWithoutQuestions,
+	hasUserJoinedTheContest,
+} from './utils/utils.js'
+
 import {
 	doesContestByHostExist,
 	haveAnswer,
@@ -37,37 +40,7 @@ router.get(
 	'/details',
 	attachUserDataIfAvailable,
 	haveContestId,
-	async function (req, res) {
-		try {
-			let contest = await Contest.findById(req.contestId)
-				.select({
-					questions: 0,
-				})
-				.lean()
-				.exec()
-
-			if (req.uid) {
-				contest.isJoined = !!(await Contestant.findOne({
-					uid: req.uid,
-					contest: req.contestId,
-				}))
-
-				contest.isCreator = contest.host_uid == req.uid
-			} else {
-				contest.isJoined = false
-				contest.isCreator = false
-			}
-
-			return res.send(contest)
-		} catch (error) {
-			if (error instanceof mongoose.Error.CastError) {
-				return res.status(400).send({
-					// error: true,
-					message: 'invalid-contest-id',
-				})
-			}
-		}
-	}
+	sendContestDetails
 )
 
 router.post(
@@ -78,7 +51,7 @@ router.post(
 	isContestLive,
 	isContestantTheCreator,
 	isAlreadyJoined,
-	hasEnoughBalanceToJoin(),
+	hasEnoughBalanceToJoin,
 	async function (req, res) {
 		let contestId = req.contestId
 		let user = req.user
@@ -375,6 +348,29 @@ router.post(
 		}
 	}
 )
+
+export async function sendContestDetails(req, res) {
+	try {
+		let contest = await getContestDetailsWithoutQuestions(req.contestId)
+
+		if (req.uid) {
+			contest.isCreator = contest.host_uid == req.uid
+			contest.isJoined = contest.isCreator
+				? false
+				: await hasUserJoinedTheContest(req.uid, req.contestId)
+		} else {
+			contest.isJoined = false
+			contest.isCreator = false
+		}
+
+		return res.send(contest)
+	} catch (error) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+}
 
 async function getLeaderboard(contestId, top10 = true) {
 	let stages = [

@@ -10,32 +10,14 @@ import {
 import User from '../../../models/User.js'
 import Contest from '../../../models/Contest.js'
 
+import { buildReq, buildRes, buildNext } from './../../../../test/testutils.js'
+
 jest.mock('../../../models/User.js')
 jest.mock('../../../models/Contest.js')
-
-function buildReq(overrides) {
-	return {
-		uid: 1001,
-		...overrides,
-	}
-}
-
-function buildRes(overrides) {
-	let res = {
-		status: jest.fn(() => res),
-		send: jest.fn(() => res),
-		...overrides,
-	}
-	return res
-}
 
 beforeEach(() => {
 	jest.clearAllMocks()
 })
-
-function buildNext(impl) {
-	return jest.fn(impl).mockName('next')
-}
 
 describe('isContestantTheCreator', () => {
 	test('respond with error when host_uid == uid', async () => {
