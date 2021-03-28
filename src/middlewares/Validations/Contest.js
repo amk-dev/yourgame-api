@@ -110,6 +110,32 @@ export async function haveAnswer(req, res, next) {
 	next()
 }
 
+export async function hasYoutubeIdInBody(req, res, next) {
+	const youtubeVideoId = req.body.youtubeVideoId
+
+	if (!youtubeVideoId) {
+		return res.send({
+			error: true,
+			message: 'youtube-video-id-is-required',
+		})
+	}
+
+	next()
+}
+
+export async function hasContestTimeInBody(req, res, next) {
+	const contestTime = req.body.contestTime
+
+	if (!contestTime) {
+		return res.send({
+			error: true,
+			message: 'contest-time-is-required',
+		})
+	}
+
+	next()
+}
+
 export async function doesContestExists(req, res, next) {
 	try {
 		const contest = await Contest.findOne({ _id: req.contestId }).select({
