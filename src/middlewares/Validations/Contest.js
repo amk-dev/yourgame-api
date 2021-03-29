@@ -16,11 +16,7 @@ export async function isContestantTheCreator(req, res, next) {
 
 export async function hasEnoughBalanceToJoin(req, res, next) {
 	try {
-		let user = await User.findOne({
-			uid: req.uid,
-		})
-			.select('balance winnings')
-			.exec()
+		let user = req.user
 
 		let winnings = user.winnings
 		let bonus = user.bonus
@@ -58,11 +54,7 @@ export async function hasEnoughBalanceToJoin(req, res, next) {
 
 export async function isCreator(req, res, next) {
 	try {
-		let user = await User.findOne({
-			uid: req.uid,
-		})
-			.lean()
-			.exec()
+		let user = req.user
 
 		if (!user.isCreator) {
 			return res.status(401).send({

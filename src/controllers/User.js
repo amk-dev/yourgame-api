@@ -31,14 +31,7 @@ router.get('/referrals', AuthMiddleware, sendReferrals)
 router.get('/transactions', AuthMiddleware, sendTransactions)
 
 export async function sendIsCreator(req, res) {
-	const uid = req.uid
-
-	let user = await User.findOne({
-		uid,
-	})
-		.select('isCreator')
-		.lean()
-		.exec()
+	let user = req.user
 
 	return res.send({
 		isCreator: user.isCreator,
@@ -82,19 +75,7 @@ export async function createNewReferral(req, res) {
 }
 
 export async function sendMoneyDetails(req, res) {
-	let user = await User.findOne({
-		uid: req.uid,
-	})
-		.select('winnings bonus')
-		.lean()
-		.exec()
-
-	if (!user) {
-		return req.status(400).send({
-			error: true,
-			message: 'cannot-find-user',
-		})
-	}
+	let user = req.user
 
 	return res.send({
 		winnings: user.winnings,
@@ -137,11 +118,8 @@ export async function sendReferrals(req, res) {
 
 export async function sendTransactions(req, res) {
 	try {
-		let transactions = await User.find({
-			uid: req.uid,
-		}).select('transactionsHistory')
-
-		return res.send(transactions[0].transactionsHistory)
+		let user = req.user
+		return res.send(user.transactionsHistory)
 	} catch (error) {
 		return res.status(500).send({
 			error: true,

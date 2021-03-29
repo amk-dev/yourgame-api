@@ -62,13 +62,14 @@ describe('hasEnoughBalanceToJoin', () => {
 		let res = buildRes()
 		let next = buildNext()
 
-		User.winnings = 3
-		User.bonus = 4
-		User.transactionsHistory = []
+		req.user = {
+			winnings: 3,
+			bonus: 4,
+			transactionsHistory: [],
+		}
 
 		await hasEnoughBalanceToJoin(req, res, next)
 
-		expect(User.findOne.mock.calls).toMatchObject([[{ uid: req.uid }]])
 		expect(res.status.mock.calls).toMatchObject([[400]])
 		expect(res.send.mock.calls).toMatchInlineSnapshot(`
 		Array [
@@ -81,9 +82,9 @@ describe('hasEnoughBalanceToJoin', () => {
 		]
 	`)
 
-		expect(User.winnings).toBe(3)
-		expect(User.bonus).toBe(4)
-		expect(User.transactionsHistory).toMatchObject([])
+		expect(req.user.winnings).toBe(3)
+		expect(req.user.bonus).toBe(4)
+		expect(req.user.transactionsHistory).toMatchObject([])
 	})
 
 	test('bonus available is greater than the entry fee', async () => {
@@ -95,23 +96,26 @@ describe('hasEnoughBalanceToJoin', () => {
 			.spyOn(Date.prototype, 'getTime')
 			.mockImplementation(() => 'mockedTime')
 
-		User.bonus = 20
-		User.winnings = 10
+		req.user = {
+			bonus: 20,
+			winnings: 10,
+			transactionsHistory: [],
+			save: jest.fn(),
+		}
 
 		await hasEnoughBalanceToJoin(req, res, next)
 
-		expect(User.bonus).toBe(10)
-		expect(User.winnings).toBe(10)
+		expect(req.user.bonus).toBe(10)
+		expect(req.user.winnings).toBe(10)
 
-		expect(User.findOne.mock.calls).toMatchObject([[{ uid: req.uid }]])
-		expect(User.transactionsHistory).toMatchObject([
+		expect(req.user.transactionsHistory).toMatchObject([
 			{
 				amount: -10,
 				event: 'joined-contest',
 				time: new Date().getTime(),
 			},
 		])
-		expect(User.save.mock.calls).toMatchObject([[]])
+		expect(req.user.save.mock.calls).toMatchObject([[]])
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()
@@ -126,15 +130,18 @@ describe('hasEnoughBalanceToJoin', () => {
 			.spyOn(Date.prototype, 'getTime')
 			.mockImplementation(() => 'mockedTime')
 
-		User.bonus = 0
-		User.winnings = 20
-		User.transactionsHistory = []
+		req.user = {
+			bonus: 0,
+			winnings: 20,
+			transactionsHistory: [],
+			save: jest.fn(),
+		}
 
 		await hasEnoughBalanceToJoin(req, res, next)
 
-		expect(User.bonus).toBe(0)
-		expect(User.winnings).toBe(10)
-		expect(User.transactionsHistory).toMatchObject([
+		expect(req.user.bonus).toBe(0)
+		expect(req.user.winnings).toBe(10)
+		expect(req.user.transactionsHistory).toMatchObject([
 			{
 				amount: -10,
 				event: 'joined-contest',
@@ -142,15 +149,14 @@ describe('hasEnoughBalanceToJoin', () => {
 			},
 		])
 
-		expect(User.findOne.mock.calls).toMatchObject([[{ uid: req.uid }]])
-		expect(User.transactionsHistory).toMatchObject([
+		expect(req.user.transactionsHistory).toMatchObject([
 			{
 				amount: -10,
 				event: 'joined-contest',
 				time: new Date().getTime(),
 			},
 		])
-		expect(User.save.mock.calls).toMatchObject([[]])
+		expect(req.user.save.mock.calls).toMatchObject([[]])
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()
@@ -165,24 +171,26 @@ describe('hasEnoughBalanceToJoin', () => {
 			.spyOn(Date.prototype, 'getTime')
 			.mockImplementation(() => 'mockedTime')
 
-		User.bonus = 3
-		User.winnings = 20
-		User.transactionsHistory = []
+		req.user = {
+			bonus: 3,
+			winnings: 20,
+			transactionsHistory: [],
+			save: jest.fn(),
+		}
 
 		await hasEnoughBalanceToJoin(req, res, next)
 
-		expect(User.bonus).toBe(0)
-		expect(User.winnings).toBe(13)
+		expect(req.user.bonus).toBe(0)
+		expect(req.user.winnings).toBe(13)
 
-		expect(User.findOne.mock.calls).toMatchObject([[{ uid: req.uid }]])
-		expect(User.transactionsHistory).toMatchObject([
+		expect(req.user.transactionsHistory).toMatchObject([
 			{
 				amount: -10,
 				event: 'joined-contest',
 				time: new Date().getTime(),
 			},
 		])
-		expect(User.save.mock.calls).toMatchObject([[]])
+		expect(req.user.save.mock.calls).toMatchObject([[]])
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()
@@ -225,7 +233,9 @@ describe('isCreator', () => {
 		let res = buildRes()
 		let next = buildNext()
 
-		User.isCreator = false
+		req.user = {
+			isCreator: false,
+		}
 
 		await isCreator(req, res, next)
 
@@ -248,7 +258,9 @@ describe('isCreator', () => {
 		let res = buildRes()
 		let next = buildNext()
 
-		User.isCreator = true
+		req.user = {
+			isCreator: true,
+		}
 
 		await isCreator(req, res, next)
 
