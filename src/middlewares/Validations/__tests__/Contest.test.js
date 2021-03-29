@@ -115,7 +115,7 @@ describe('hasEnoughBalanceToJoin', () => {
 				time: new Date().getTime(),
 			},
 		])
-		expect(req.user.save.mock.calls).toMatchObject([[]])
+		expect(req.user.save).not.toHaveBeenCalled()
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()
@@ -156,7 +156,8 @@ describe('hasEnoughBalanceToJoin', () => {
 				time: new Date().getTime(),
 			},
 		])
-		expect(req.user.save.mock.calls).toMatchObject([[]])
+
+		expect(req.user.save).not.toHaveBeenCalled()
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()
@@ -182,15 +183,15 @@ describe('hasEnoughBalanceToJoin', () => {
 
 		expect(req.user.bonus).toBe(0)
 		expect(req.user.winnings).toBe(13)
-
-		expect(req.user.transactionsHistory).toMatchObject([
+		expect(req.user.transactionsHistory).toStrictEqual([
 			{
 				amount: -10,
 				event: 'joined-contest',
 				time: new Date().getTime(),
 			},
 		])
-		expect(req.user.save.mock.calls).toMatchObject([[]])
+
+		expect(req.user.save).not.toHaveBeenCalled()
 		expect(next.mock.calls).toMatchObject([[]])
 
 		getTimeMock.mockRestore()

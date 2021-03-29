@@ -41,8 +41,6 @@ export async function hasEnoughBalanceToJoin(req, res, next) {
 			time: new Date().getTime(),
 		})
 
-		await user.save()
-
 		next()
 	} catch (error) {
 		return res.status(500).send({
