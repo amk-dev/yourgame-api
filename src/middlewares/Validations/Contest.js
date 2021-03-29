@@ -1,6 +1,4 @@
 import Contest from './../../models/Contest'
-import Contestant from './../../models/Contestant'
-import Submission from './../../models/Submission'
 import User from './../../models/User'
 
 export async function isContestantTheCreator(req, res, next) {
@@ -16,13 +14,45 @@ export async function isContestantTheCreator(req, res, next) {
 	next()
 }
 
+export async function hasEnoughBalanceToJoin(req, res, next) {
+	try {
+		let user = req.user
+
+		let winnings = user.winnings
+		let bonus = user.bonus
+
+		let totalAmount = winnings + bonus
+
+		if (user.bonus >= 10) {
+			user.bonus -= 10
+		} else if (totalAmount >= 10) {
+			user.winnings -= 10 - user.bonus
+			user.bonus = 0
+		} else {
+			return res.status(400).send({
+				error: true,
+				message: 'not-enough-balance',
+			})
+		}
+
+		user.transactionsHistory.push({
+			amount: -10,
+			event: 'joined-contest',
+			time: new Date().getTime(),
+		})
+
+		next()
+	} catch (error) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+}
+
 export async function isCreator(req, res, next) {
 	try {
-		let user = await User.findOne({
-			uid: req.uid,
-		})
-			.lean()
-			.exec()
+		let user = req.user
 
 		if (!user.isCreator) {
 			return res.status(401).send({
@@ -31,8 +61,6 @@ export async function isCreator(req, res, next) {
 			})
 		}
 	} catch (err) {
-		console.log(err)
-
 		return res.status(500).send({
 			error: true,
 			message: 'something-went-wrong',
@@ -56,6 +84,7 @@ export async function haveContestId(req, res, next) {
 
 	next()
 }
+
 export async function haveAnswer(req, res, next) {
 	const answer = req.body.answer
 
@@ -71,6 +100,32 @@ export async function haveAnswer(req, res, next) {
 	next()
 }
 
+export async function hasYoutubeIdInBody(req, res, next) {
+	const youtubeVideoId = req.body.youtubeVideoId
+
+	if (!youtubeVideoId) {
+		return res.send({
+			error: true,
+			message: 'youtube-video-id-is-required',
+		})
+	}
+
+	next()
+}
+
+export async function hasContestTimeInBody(req, res, next) {
+	const contestTime = req.body.contestTime
+
+	if (!contestTime) {
+		return res.send({
+			error: true,
+			message: 'contest-time-is-required',
+		})
+	}
+
+	next()
+}
+
 export async function doesContestExists(req, res, next) {
 	try {
 		const contest = await Contest.findOne({ _id: req.contestId }).select({
@@ -78,14 +133,14 @@ export async function doesContestExists(req, res, next) {
 			host_uid: 1,
 		})
 
-		req.contest = contest
-
 		if (!contest) {
 			return res.status(400).send({
 				error: true,
 				message: 'contest-does-not-exists',
 			})
 		}
+
+		req.contest = contest
 
 		next()
 	} catch (e) {
@@ -184,12 +239,19 @@ export async function isAlreadyJoined(req, res, next) {
 }
 
 export async function isQuestionAlreadyAnswered(req, res, next) {
-	let contest = await Contest.findById(req.contestId).exec()
-
+	let contest = req.contest
 	const currentQuestionId = contest.questions[contest.currentQuestion - 1]
-	let submission = await isAlreadySubmitted(currentQuestionId, req.uid)
 
-	if (submission) {
+	let user = await User.findOne({
+		uid: req.uid,
+		'joinedContests.contest': contest._id,
+		'joinedContests.contest.submissions.questionId': currentQuestionId,
+	})
+		.select('joinedContests')
+		.lean()
+		.exec()
+
+	if (user) {
 		return res.status(400).send({
 			error: true,
 			message: 'question-already-answered',
@@ -260,21 +322,10 @@ async function getContest(contestId, host_uid = null, lean = true) {
 	}
 }
 
-async function isAlreadySubmitted(questionId, uid) {
-	let submission = await Submission.find({
-		questionId: questionId,
-		uid: uid,
-	})
-		.lean()
-		.exec()
-
-	return submission.length > 0
-}
-
 async function findContestant(contestId, uid) {
-	let contestant = await Contestant.findOne({
-		contest: contestId,
+	let contestant = await User.findOne({
 		uid: uid,
+		'joinedContests.contest': contestId,
 	}).exec()
 
 	return contestant
