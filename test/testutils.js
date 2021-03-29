@@ -61,3 +61,48 @@ export async function buildContest(overrides) {
 	await contest.save()
 	return contest
 }
+
+export async function generateUsersForTestingLeaderboard(
+	n,
+	contestId,
+	lean = true
+) {
+	let users = new Array(n)
+
+	for (let i = 0; i < n; i++) {
+		let user = await buildUser({
+			joinedContests: [
+				{
+					contest: contestId,
+					points: getPoints(),
+					timeTaken: getTimeTaken(),
+				},
+			],
+		})
+
+		if (lean) {
+			user = user.toObject()
+			let leaderboardItem = {
+				_id: user._id,
+				uid: user.uid,
+				picture: user.picture,
+				displayName: user.displayName,
+				points: user.joinedContests[0].points,
+				timeTaken: user.joinedContests[0].timeTaken,
+			}
+
+			users[i] = leaderboardItem
+		}
+	}
+
+	return users
+}
+
+export function sortLeaderboardManually(users, top10 = true) {
+	users.sort(
+		(user1, user2) =>
+			user2.points - user1.points || user1.timeTaken - user2.timeTaken
+	)
+
+	return top10 ? users.slice(0, 10) : users
+}
