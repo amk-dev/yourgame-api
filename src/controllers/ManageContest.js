@@ -133,13 +133,13 @@ export async function sendContestDetails(req, res) {
 }
 
 export async function joinContest(req, res) {
-	let contestId = req.contestId
-	let user = req.user
-	user.joinedContests.push({
-		contest: contestId,
-	})
-
 	try {
+		let contestId = req.contestId
+		let user = req.user
+		user.joinedContests.push({
+			contest: contestId,
+		})
+
 		await user.save()
 		return res.send({
 			success: true,
