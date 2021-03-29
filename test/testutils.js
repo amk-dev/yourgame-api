@@ -23,13 +23,15 @@ export function buildNext(impl) {
 	return jest.fn(impl).mockName('next')
 }
 
-const getContestId = () => mongoose.Types.ObjectId()
-const getUid = () => faker.random.uuid()
-const getEmail = () => faker.internet.email()
-const getPicture = () => faker.image.people()
-const getDisplayName = () => faker.name.firstName()
-const getYoutubeVideoId = () => faker.random.word()
-const getStartTime = () => faker.time.recent()
+export const getContestId = () => mongoose.Types.ObjectId()
+export const getUid = () => faker.datatype.uuid()
+export const getEmail = () => faker.internet.email()
+export const getPicture = () => faker.image.people()
+export const getDisplayName = () => faker.name.firstName()
+export const getYoutubeVideoId = () => faker.random.word()
+export const getStartTime = () => faker.time.recent()
+export const getPoints = () => faker.datatype.number(10)
+export const getTimeTaken = () => faker.datatype.number(100)
 
 export async function buildUser(overrides) {
 	let user = new User({
