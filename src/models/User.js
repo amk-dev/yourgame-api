@@ -45,7 +45,14 @@ const joinedContest = new mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
 		ref: 'contest',
-		unique: true,
+	},
+	points: {
+		type: Number,
+		required: true,
+	},
+	timeTaken: {
+		type: Number,
+		required: true,
 	},
 	submissions: [submission],
 })

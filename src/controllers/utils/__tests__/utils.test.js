@@ -1,5 +1,10 @@
 import { getJoinedContestsForUser } from './../utils.js'
-import { buildUser, buildContest } from './../../../../test/testutils.js'
+import {
+	buildUser,
+	buildContest,
+	getPoints,
+	getTimeTaken,
+} from './../../../../test/testutils.js'
 
 import mongoose from 'mongoose'
 import User from '../../../models/User.js'
@@ -32,7 +37,13 @@ describe('getJoinedContestsForUser', () => {
 			host_display_name: user.displayName,
 		})
 
-		user.joinedContests = [{ contest: contest._id }]
+		user.joinedContests = [
+			{
+				contest: contest._id,
+				points: getPoints(),
+				timeTaken: getTimeTaken(),
+			},
+		]
 		await user.save()
 
 		let joinedContests = await getJoinedContestsForUser(user.uid)
