@@ -1,5 +1,6 @@
 import Contest from './../../models/Contest.js'
 import User from './../../models/User.js'
+import Question from './../../models/Question.js'
 
 export async function getContestDetailsWithoutQuestions(contestId) {
 	let contest = await Contest.findById(contestId)
@@ -158,4 +159,9 @@ export async function getLeaderboard(contestId, top10 = true) {
 	let leaderboard = await User.aggregate(stages)
 
 	return leaderboard
+}
+
+export async function findQuestionById(questionId) {
+	let question = await Question.findById(questionId).lean().exec()
+	return question
 }

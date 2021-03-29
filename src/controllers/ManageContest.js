@@ -10,6 +10,7 @@ import {
 	getContestDetailsWithoutQuestions,
 	hasUserJoinedTheContest,
 	getLeaderboard,
+	findQuestionById,
 } from './utils/utils.js'
 
 import {
@@ -339,9 +340,7 @@ export async function answerQuestion(req, res) {
 		let answeredTime = Date.now()
 		let timeTaken = answeredTime - contest.currentQuestionReleaseTime
 		let currentQuestionId = contest.questions[contest.currentQuestion - 1]
-		let currentQuestion = await Question.findById(currentQuestionId)
-			.lean()
-			.exec()
+		let currentQuestion = await findQuestionById(currentQuestionId)
 
 		let answer = req.answer
 		let isRightAnswer =
@@ -356,19 +355,13 @@ export async function answerQuestion(req, res) {
 			timeTaken: timeTaken,
 		}
 
-		let joinedContest = await contestant.joinedContests
-			.findOne({
-				contest: contest._id,
-			})
-			.exec()
-
-		joinedContest.submissions.push(newSubmission)
+		contestant.joinedContests[0].submissions.push(newSubmission)
 
 		if (isRightAnswer) {
-			joinedContest.points += 1
+			contestant.joinedContests[0].points += 1
 		}
 
-		joinedContest.timeTaken += timeTaken
+		contestant.joinedContests[0].timeTaken += timeTaken
 
 		await contestant.save()
 

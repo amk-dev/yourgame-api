@@ -239,22 +239,19 @@ export async function isAlreadyJoined(req, res, next) {
 }
 
 export async function isQuestionAlreadyAnswered(req, res, next) {
-	let contest = await Contest.findById(req.contestId).lean().exec()
+	let contest = req.contest
+	const currentQuestionId = contest.questions[contest.currentQuestion - 1]
 
-	let joinedContest = await User.findOne({
+	let user = await User.findOne({
 		uid: req.uid,
-		'joinedContests.contest': req.contestId,
+		'joinedContests.contest': contest._id,
+		'joinedContests.contest.submissions.questionId': currentQuestionId,
 	})
+		.select('joinedContests')
 		.lean()
 		.exec()
 
-	const currentQuestionId = contest.questions[contest.currentQuestion - 1]
-
-	let submission = await joinedContest[0].submissions.findOne({
-		questionId: currentQuestionId,
-	})
-
-	if (submission) {
+	if (user) {
 		return res.status(400).send({
 			error: true,
 			message: 'question-already-answered',

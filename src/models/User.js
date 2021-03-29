@@ -34,10 +34,6 @@ const submission = new mongoose.Schema({
 		type: Number,
 		required: true,
 	},
-	point: {
-		type: Number,
-		required: true,
-	},
 })
 
 const joinedContest = new mongoose.Schema({
