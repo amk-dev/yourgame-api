@@ -2,6 +2,8 @@ import Contest from './../../models/Contest.js'
 import User from './../../models/User.js'
 import Question from './../../models/Question.js'
 
+import mongoose from 'mongoose'
+
 export async function getContestDetailsWithoutQuestions(contestId) {
 	let contest = await Contest.findById(contestId)
 		.select({
@@ -119,7 +121,7 @@ export async function getLeaderboard(contestId, top10 = true) {
 	let stages = [
 		{
 			$match: {
-				'joinedContests.contest': contestId,
+				'joinedContests.contest': mongoose.Types.ObjectId(contestId),
 			},
 		},
 		{
