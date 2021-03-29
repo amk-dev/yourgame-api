@@ -1,9 +1,11 @@
-import { getJoinedContestsForUser } from './../utils.js'
+import { getJoinedContestsForUser, getLeaderboard } from './../utils.js'
 import {
 	buildUser,
 	buildContest,
 	getPoints,
 	getTimeTaken,
+	sortLeaderboardManually,
+	generateUsersForTestingLeaderboard,
 } from './../../../../test/testutils.js'
 
 import mongoose from 'mongoose'
@@ -50,5 +52,32 @@ describe('getJoinedContestsForUser', () => {
 
 		expect(joinedContests[0].host_picture).toBe(user.picture)
 		expect(joinedContests[0].host_display_name).toBe(user.displayName)
+	})
+})
+
+describe('getLeaderboard', () => {
+	test('gets the top10 leaderboard', async () => {
+		await User.deleteMany()
+		await Contest.deleteMany()
+
+		let contest = await buildContest()
+		let users = await generateUsersForTestingLeaderboard(20, contest._id)
+
+		let manuallyGeneratedLeaderboard = sortLeaderboardManually(users)
+		let leaderboard = await getLeaderboard(contest._id)
+
+		expect(leaderboard).toStrictEqual(manuallyGeneratedLeaderboard)
+	})
+	test('gets the entire leaderboard', async () => {
+		await User.deleteMany()
+		await Contest.deleteMany()
+
+		let contest = await buildContest()
+		let users = await generateUsersForTestingLeaderboard(20, contest._id)
+
+		let manuallyGeneratedLeaderboard = sortLeaderboardManually(users, false)
+		let leaderboard = await getLeaderboard(contest._id, false)
+
+		expect(leaderboard).toStrictEqual(manuallyGeneratedLeaderboard)
 	})
 })
