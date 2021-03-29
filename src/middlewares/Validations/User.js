@@ -21,9 +21,7 @@ export async function isValidRefferalId(req, res, next) {
 
 export async function doesRefferalExist(req, res, next) {
 	try {
-		const user = await User.findOne({
-			uid: req.uid,
-		}).exec()
+		let user = req.user
 
 		if (user.isReffered != undefined) {
 			return res.status(400).send({
@@ -31,8 +29,6 @@ export async function doesRefferalExist(req, res, next) {
 				message: 'referral-already-exist',
 			})
 		}
-
-		req.user = user
 
 		next()
 	} catch (error) {
