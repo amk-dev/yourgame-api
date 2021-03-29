@@ -48,11 +48,12 @@ const joinedContest = new mongoose.Schema({
 	},
 	points: {
 		type: Number,
-		required: true,
+		default: 0,
 	},
 	timeTaken: {
 		type: Number,
 		required: true,
+		default: 0,
 	},
 	submissions: [submission],
 })
