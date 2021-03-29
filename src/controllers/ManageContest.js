@@ -9,6 +9,7 @@ import Winning from './../models/Winning'
 import {
 	getContestDetailsWithoutQuestions,
 	hasUserJoinedTheContest,
+	getLeaderboard,
 } from './utils/utils.js'
 
 import {
@@ -30,7 +31,6 @@ import {
 	isContestEnded,
 	hasEnoughBalanceToJoin,
 } from '../middlewares/Validations/Contest.js'
-import User from '../models/User.js'
 
 let router = express.Router({
 	mergeParams: true,
@@ -381,51 +381,6 @@ export async function answerQuestion(req, res) {
 			error: true,
 		})
 	}
-}
-
-async function getLeaderboard(contestId, top10 = true) {
-	let stages = [
-		{
-			$match: {
-				'joinedContests.contest': contestId,
-			},
-		},
-		{
-			project: {
-				uid: 1,
-				displayName: 1,
-				picture: 1,
-				joinedContests: 1,
-			},
-		},
-		{
-			$unwind: '$joinedContests',
-		},
-		{
-			$project: {
-				uid: 1,
-				displayName: 1,
-				picture: 1,
-				points: '$joinedContests.point',
-				timeTaken: '$joinedContests.timeTaken',
-			},
-		},
-		{
-			$sort: {
-				'joinedContest.points': -1,
-			},
-		},
-	]
-
-	if (top10) {
-		stages.push({
-			$limit: 10,
-		})
-	}
-
-	let leaderboard = await User.aggregate(stages)
-
-	return leaderboard
 }
 
 export default router

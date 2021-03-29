@@ -113,3 +113,49 @@ export async function getJoinedContestsForUser(uid) {
 
 	return user[0].joinedContests
 }
+
+export async function getLeaderboard(contestId, top10 = true) {
+	let stages = [
+		{
+			$match: {
+				'joinedContests.contest': contestId,
+			},
+		},
+		{
+			$project: {
+				uid: 1,
+				displayName: 1,
+				picture: 1,
+				joinedContests: 1,
+			},
+		},
+		{
+			$unwind: '$joinedContests',
+		},
+		{
+			$project: {
+				uid: 1,
+				displayName: 1,
+				picture: 1,
+				points: '$joinedContests.points',
+				timeTaken: '$joinedContests.timeTaken',
+			},
+		},
+		{
+			$sort: {
+				points: -1,
+				timeTaken: 1,
+			},
+		},
+	]
+
+	if (top10) {
+		stages.push({
+			$limit: 10,
+		})
+	}
+
+	let leaderboard = await User.aggregate(stages)
+
+	return leaderboard
+}
