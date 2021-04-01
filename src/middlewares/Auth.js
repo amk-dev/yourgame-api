@@ -2,6 +2,8 @@
 import admin from './../config/config.js'
 import User from './../models/User.js'
 
+import { findUserByUid } from './../controllers/utils/utils.js'
+
 export default async function auth(req, res, next) {
 	const bearer = req.headers.authorization
 
@@ -83,18 +85,6 @@ async function verifyIdToken(idToken) {
 		console.log(error)
 		return false
 	}
-}
-
-async function findUserByUid(uid, lean = true) {
-	let user
-
-	if (lean) {
-		user = await User.findOne({ uid: uid }).lean().exec()
-	} else {
-		user = await User.findOne({ uid: uid }).exec()
-	}
-
-	return user
 }
 
 async function createNewUser(uid, email, picture, displayName) {

@@ -2,15 +2,15 @@ import express from 'express'
 import AuthMiddleware from '../middlewares/Auth.js'
 import { attachUserDataIfAvailable } from '../middlewares/Auth.js'
 
-import Contest from './../models/Contest'
 import Question from './../models/Question'
-import Winning from './../models/Winning'
 
 import {
 	getContestDetailsWithoutQuestions,
 	hasUserJoinedTheContest,
 	getLeaderboard,
 	findQuestionById,
+	updateContestWinners,
+	setContestStatus,
 } from './utils/utils.js'
 
 import {
@@ -253,62 +253,15 @@ async function sendNextQuestion(req, res) {
 }
 
 export async function endContest(req, res) {
-	// get all of the leaderboard
-	let leaderboard = await getLeaderboard(req.contestId, false)
-
-	// update their winnings
-	let contestWinnings = {
-		1: 100,
-		2: 75,
-		3: 50,
-		4: 25,
-		5: 10,
-		6: 10,
-		7: 10,
-		8: 10,
-		9: 10,
-	}
-
-	let winnings = []
-
-	for (let i = 0; i < 9; i++) {
-		if (i < leaderboard.length) {
-			let position = i + 1
-
-			winnings.push({
-				uid: leaderboard[i].uid,
-				contestId: req.contestId,
-				amount: contestWinnings[position],
-			})
-		} else {
-			break
-		}
-	}
-
 	try {
-		await Winning.insertMany(winnings, {
-			ordered: false,
-		})
-	} catch (err) {
-		if (err.code != 11000) {
-			console.log(err)
-		}
-	}
+		// get all of the leaderboard
+		let leaderboard = await getLeaderboard(req.contestId, false)
+		await updateContestWinners(leaderboard, req.contestId)
+		await setContestStatus(req.contestId, 'ended')
 
-	// update the leaderboard for contest
-	let contest = await Contest.findById(req.contestId).exec()
-	contest.leaderboard = leaderboard
-
-	contest.status = 'ended'
-	try {
-		await contest.save()
-
-		return res.send({
-			success: true,
-		})
+		return res.send({ success: true })
 	} catch (err) {
 		console.log(err)
-
 		return res.status(500).send({
 			error: true,
 			message: 'something-went-wrong',
@@ -355,13 +308,19 @@ export async function answerQuestion(req, res) {
 			timeTaken: timeTaken,
 		}
 
-		contestant.joinedContests[0].submissions.push(newSubmission)
+		let joinedContest = contestant.joinedContests.filter(
+			(joinedContest) => {
+				return joinedContest.contest.toString() == contest._id
+			}
+		)[0]
+
+		joinedContest.submissions.push(newSubmission)
 
 		if (isRightAnswer) {
-			contestant.joinedContests[0].points += 1
+			joinedContest.points += 1
 		}
 
-		contestant.joinedContests[0].timeTaken += timeTaken
+		joinedContest.timeTaken += timeTaken
 
 		await contestant.save()
 
