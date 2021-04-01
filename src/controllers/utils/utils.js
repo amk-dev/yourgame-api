@@ -129,7 +129,18 @@ export async function getLeaderboard(contestId, top10 = true) {
 				uid: 1,
 				displayName: 1,
 				picture: 1,
-				joinedContests: 1,
+				joinedContests: {
+					$filter: {
+						input: '$joinedContests',
+						as: 'joinedContest',
+						cond: {
+							$eq: [
+								'$$joinedContest.contest',
+								mongoose.Types.ObjectId(contestId),
+							],
+						},
+					},
+				},
 			},
 		},
 		{
@@ -166,4 +177,71 @@ export async function getLeaderboard(contestId, top10 = true) {
 export async function findQuestionById(questionId) {
 	let question = await Question.findById(questionId).lean().exec()
 	return question
+}
+
+export async function findUserByUid(uid, lean = true) {
+	let user
+
+	if (lean) {
+		user = await User.findOne({ uid: uid }).lean().exec()
+	} else {
+		user = await User.findOne({ uid: uid }).exec()
+	}
+
+	return user
+}
+
+export async function addWinningForUser(uid, amount) {
+	let user = await findUserByUid(uid, false)
+	user.winnings += amount
+	user.transactionsHistory.push({
+		amount: amount,
+		event: 'winning',
+		time: new Date().getTime(),
+	})
+	user.save()
+}
+
+export async function setContestStatus(contestId, status) {
+	let contest = await Contest.findByIdAndUpdate(
+		contestId,
+		{
+			status: status,
+		},
+		{ new: true }
+	)
+
+	return contest
+}
+
+export async function updateContestWinners(leaderboard) {
+	// update their winnings
+	let contestWinnings = {
+		1: 100,
+		2: 75,
+		3: 50,
+		4: 25,
+		5: 10,
+		6: 10,
+		7: 10,
+		8: 10,
+		9: 10,
+	}
+
+	let updateRequests = []
+
+	for (let i = 0; i < 9; i++) {
+		if (i < leaderboard.length) {
+			let position = i + 1
+			updateRequests.push(
+				addWinningForUser(leaderboard[i].uid, contestWinnings[position])
+			)
+		} else {
+			break
+		}
+	}
+
+	await Promise.all(updateRequests)
+
+	return true
 }
