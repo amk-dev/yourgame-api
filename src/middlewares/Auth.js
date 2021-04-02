@@ -5,25 +5,29 @@ import User from './../models/User.js'
 import { findUserByUid } from './../controllers/utils/utils.js'
 
 export default async function auth(req, res, next) {
-	const bearer = req.headers.authorization
+	try {
+		const bearer = req.headers.authorization
 
-	let token = extractTokenFromHeader(bearer)
-	if (!token) return res.status(401).end()
+		let token = extractTokenFromHeader(bearer)
+		if (!token) return res.status(401).end()
 
-	let tokenContent = await getTokenContent(token)
-	if (!tokenContent) return res.status(401).end()
+		let tokenContent = await getTokenContent(token)
+		if (!tokenContent) return res.status(401).end()
 
-	let { uid, email, picture } = tokenContent
-	let user = await createUserIfDoesntExist(uid, email, picture)
+		let { uid, email, picture } = tokenContent
+		let user = await createUserIfDoesntExist(uid, email, picture, req)
 
-	req.uid = uid
-	req.email = email
-	req.picture = picture
-	req.displayName = user.displayName
+		req.uid = uid
+		req.email = email
+		req.picture = picture
+		req.displayName = user.displayName
 
-	req.user = user
+		req.user = user
 
-	next()
+		next()
+	} catch (error) {
+		next(error)
+	}
 }
 
 export async function attachUserDataIfAvailable(req, res, next) {
@@ -47,11 +51,14 @@ export async function attachUserDataIfAvailable(req, res, next) {
 	next()
 }
 
-async function createUserIfDoesntExist(uid, email, picture) {
+async function createUserIfDoesntExist(uid, email, picture, req) {
 	let user = await findUserByUid(uid, false)
+
+	console.log(req)
 
 	if (!user) {
 		let { displayName } = await admin.auth().getUser(uid)
+
 		user = await createNewUser(uid, email, picture, displayName)
 	}
 
