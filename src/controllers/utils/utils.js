@@ -242,3 +242,7 @@ export async function updateContestWinners(leaderboard) {
 
 	return true
 }
+
+export async function getContestStatus(contestId) {
+	return await Contest.findById(contestId).select('status').lean().exec()
+}
