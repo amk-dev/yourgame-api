@@ -188,6 +188,16 @@ export async function isContestLive(req, res, next) {
 	next()
 }
 
+export async function isContestUpcoming(req, res, next) {
+	if (req.contest.status != 'upcoming') {
+		return res.status(400).send({
+			error: true,
+			message: 'contest-already-started',
+		})
+	}
+	next()
+}
+
 export async function hasContestStarted(req, res, next) {
 	if (req.contest.status == 'upcoming') {
 		return res.status(400).send({
