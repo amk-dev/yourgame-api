@@ -203,13 +203,10 @@ export async function addWinningForUser(uid, amount) {
 }
 
 export async function setContestStatus(contestId, status) {
-	let contest = await Contest.findByIdAndUpdate(
-		contestId,
-		{
-			status: status,
-		},
-		{ new: true }
-	)
+	let contest = await Contest.findById(contestId)
+	contest.status = status
+
+	await contest.save()
 
 	return contest
 }
@@ -244,4 +241,8 @@ export async function updateContestWinners(leaderboard) {
 	await Promise.all(updateRequests)
 
 	return true
+}
+
+export async function getContestStatus(contestId) {
+	return await Contest.findById(contestId).select('status').lean().exec()
 }

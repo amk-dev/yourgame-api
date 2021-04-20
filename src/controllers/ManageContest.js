@@ -4,6 +4,8 @@ import { attachUserDataIfAvailable } from '../middlewares/Auth.js'
 
 import Question from './../models/Question'
 
+import ContestEventEmitter from './../ContestEventEmitter.js'
+
 import {
 	getContestDetailsWithoutQuestions,
 	hasUserJoinedTheContest,
@@ -11,6 +13,7 @@ import {
 	findQuestionById,
 	updateContestWinners,
 	setContestStatus,
+	getContestStatus,
 } from './utils/utils.js'
 
 import {
@@ -31,6 +34,7 @@ import {
 	haveMoreQuestions,
 	isContestEnded,
 	hasEnoughBalanceToJoin,
+	isContestUpcoming,
 } from '../middlewares/Validations/Contest.js'
 
 let router = express.Router({
@@ -74,6 +78,15 @@ router.post(
 	startContest
 )
 
+router.post(
+	'/startvideo',
+	AuthMiddleware,
+	haveContestId,
+	doesContestByHostExist,
+	isContestUpcoming,
+	startVideo
+)
+
 router.get(
 	'/nextquestion',
 	AuthMiddleware,
@@ -109,6 +122,9 @@ router.post(
 	isAnsweringOpen,
 	answerQuestion
 )
+
+const streamContestStatus = getStreamContestStatusFunction()
+router.get('/streams/status', haveContestId, streamContestStatus)
 
 export async function sendContestDetails(req, res) {
 	try {
@@ -259,6 +275,11 @@ export async function endContest(req, res) {
 		await updateContestWinners(leaderboard, req.contestId)
 		await setContestStatus(req.contestId, 'ended')
 
+		ContestEventEmitter.emit('status-changed ', {
+			contestId: req.contestId,
+			status: 'ended',
+		})
+
 		return res.send({ success: true })
 	} catch (err) {
 		console.log(err)
@@ -333,6 +354,109 @@ export async function answerQuestion(req, res) {
 			error: true,
 		})
 	}
+}
+
+export async function startVideo(req, res) {
+	try {
+		await setContestStatus(req.contestId, 'video-live')
+
+		ContestEventEmitter.emit('status-changed', {
+			contestId: req.contestId,
+			status: 'video-live',
+		})
+
+		return res.send({
+			success: true,
+		})
+	} catch (error) {
+		return res.status(500).send({
+			error: true,
+			message: 'something-went-wrong',
+		})
+	}
+}
+
+function getStreamContestStatusFunction() {
+	let sentStatuses = {}
+
+	async function streamContestStatus(req, res) {
+		let currentContestId = req.contestId
+
+		setSseHeaders()
+		setupContestStatusChangeHandlers()
+		setupClientTerminationHandlers()
+		await sendCurrentStatusToClient()
+
+		function setSseHeaders() {
+			res.writeHead(200, {
+				Connection: 'keep-alive',
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+			})
+		}
+
+		function setupContestStatusChangeHandlers() {
+			ContestEventEmitter.on('status-changed', sendStatusChangeToClient)
+		}
+
+		function setupClientTerminationHandlers() {
+			req.on('close', () => {
+				if (!res.finished) {
+					res.end()
+				}
+				ContestEventEmitter.removeListener(
+					'status-changed',
+					sendStatusChangeToClient
+				)
+			})
+		}
+
+		async function sendCurrentStatusToClient() {
+			let currentContestStatus = await getContestStatus(currentContestId)
+			sendStatusChangeToClient({
+				status: currentContestStatus.status,
+				contestId: currentContestId,
+			})
+		}
+
+		async function sendStatusChangeToClient({ status, contestId }) {
+			if (contestId == currentContestId) {
+				if (!sentStatuses[contestId]) {
+					writeResponse()
+					return
+				}
+
+				if (isCurrentStatusLatest(status, sentStatuses[contestId])) {
+					writeResponse()
+				}
+			}
+
+			function writeResponse() {
+				let data = {
+					contest: contestId,
+					status: status,
+				}
+
+				res.write(`data: ${JSON.stringify(data)}`)
+				res.write('\n\n')
+
+				sentStatuses[contestId] = status
+			}
+		}
+	}
+
+	return streamContestStatus
+}
+
+async function isCurrentStatusLatest(currentStatus, lastStatus) {
+	let order = {
+		upcoming: 0,
+		'video-live': 1,
+		live: 2,
+		end: 3,
+	}
+
+	return order[currentStatus] > order[lastStatus]
 }
 
 export default router

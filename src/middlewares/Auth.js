@@ -15,7 +15,7 @@ export default async function auth(req, res, next) {
 		if (!tokenContent) return res.status(401).end()
 
 		let { uid, email, picture } = tokenContent
-		let user = await createUserIfDoesntExist(uid, email, picture, req)
+		let user = await createUserIfDoesntExist(uid, email, picture)
 
 		req.uid = uid
 		req.email = email
@@ -51,10 +51,8 @@ export async function attachUserDataIfAvailable(req, res, next) {
 	next()
 }
 
-async function createUserIfDoesntExist(uid, email, picture, req) {
+async function createUserIfDoesntExist(uid, email, picture) {
 	let user = await findUserByUid(uid, false)
-
-	console.log(req)
 
 	if (!user) {
 		let { displayName } = await admin.auth().getUser(uid)
