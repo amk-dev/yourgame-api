@@ -275,7 +275,7 @@ export async function endContest(req, res) {
 		await updateContestWinners(leaderboard, req.contestId)
 		await setContestStatus(req.contestId, 'ended')
 
-		ContestEventEmitter.emit('status-changed ', {
+		ContestEventEmitter.emit('status-changed', {
 			contestId: req.contestId,
 			status: 'ended',
 		})
