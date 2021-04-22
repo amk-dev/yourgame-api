@@ -252,16 +252,53 @@ export async function isQuestionAlreadyAnswered(req, res, next) {
 	let contest = req.contest
 	const currentQuestionId = contest.questions[contest.currentQuestion - 1]
 
-	let user = await User.findOne({
-		uid: req.uid,
-		'joinedContests.contest': contest._id,
-		'joinedContests.contest.submissions.questionId': currentQuestionId,
-	})
-		.select('joinedContests')
-		.lean()
-		.exec()
+	let result = await User.aggregate([
+		{
+			$match: {
+				uid: 'yQMTRJSDieZXhSefzo7PIT8OyqG2',
+			},
+		},
+		{
+			$project: {
+				joinedContests: {
+					$filter: {
+						input: '$joinedContests',
+						as: 'joinedContests',
+						cond: {
+							$eq: ['$$joinedContests.contest', contest._id],
+						},
+					},
+				},
+			},
+		},
+		{
+			$project: {
+				joinedContest: {
+					$arrayElemAt: ['$joinedContests', 0],
+				},
+			},
+		},
+		{
+			$project: {
+				submission: {
+					$filter: {
+						input: '$joinedContest.submissions',
+						as: 'submissions',
+						cond: {
+							$eq: [
+								'$$submissions.questionId',
+								currentQuestionId,
+							],
+						},
+					},
+				},
+			},
+		},
+	]).exec()
 
-	if (user) {
+	let submission = result[0].submission
+
+	if (submission.length) {
 		return res.status(400).send({
 			error: true,
 			message: 'question-already-answered',
