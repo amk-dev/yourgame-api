@@ -41,7 +41,7 @@
 		"@types/jest": "^26.0.22",
 		"dotenv": "^8.2.0",
 		"eslint": "^7.22.0",
-		"eslint-config-prettier": "^8.1.0",
+		"eslint-config-prettier": "^8.2.0",
 		"faker": "^5.5.3",
 		"eslint-plugin-jest": "^24.3.5",
 		"husky": "^4.3.8",
